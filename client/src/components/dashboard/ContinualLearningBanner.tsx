@@ -2,11 +2,17 @@ import React from 'react';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const ContinualLearningBanner = () => {
-  // Calculate randomized progress metrics for display purposes
-  const coursesInProgress = Math.floor(Math.random() * 3) + 1; // 1-3 courses
-  const completionPercentage = Math.floor(Math.random() * 85) + 10; // 10-95%
-  const timeSpentThisWeek = Math.floor(Math.random() * 10) + 2; // 2-12 hours
+interface ContinualLearningBannerProps {
+  coursesInProgress?: number;
+  completionPercentage?: number;
+  timeSpentThisWeek?: number;
+}
+
+const ContinualLearningBanner = ({
+  coursesInProgress = 0,
+  completionPercentage = 0,
+  timeSpentThisWeek = 0
+}: ContinualLearningBannerProps) => {
   
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50 p-6 mb-8">

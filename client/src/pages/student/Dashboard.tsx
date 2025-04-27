@@ -24,14 +24,14 @@ const StudentDashboard = () => {
     enabled: !!user,
   });
   
-  // Use demo courses for display
-  const courses = apiCourses.length > 0 ? apiCourses : demoCourses;
+  // Use courses from API
+  const courses = apiCourses;
   
   console.log("Courses:", courses);
   console.log("isLoading:", isLoading);
   
   // Filter courses based on search term
-  const filteredCourses = courses.filter(course => 
+  const filteredCourses = courses.filter((course: Course) => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -47,7 +47,11 @@ const StudentDashboard = () => {
       rightSidebar={<TodoList />}
     >
       {/* Continual Learning Banner */}
-      <ContinualLearningBanner />
+      <ContinualLearningBanner 
+        coursesInProgress={courses.length} 
+        completionPercentage={courses.length > 0 ? 35 : 0} // This would ideally come from an API endpoint tracking progress
+        timeSpentThisWeek={courses.length > 0 ? 5 : 0} // This would ideally come from an API endpoint tracking time
+      />
       
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-3 mb-6">
@@ -77,11 +81,10 @@ const StudentDashboard = () => {
         </div>
       ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
+          {filteredCourses.map((course: Course) => (
             <CourseCard 
               key={course.id} 
-              course={course} 
-              newItems={Math.floor(Math.random() * 4)} // Random number for demo
+              course={course}
             />
           ))}
           
