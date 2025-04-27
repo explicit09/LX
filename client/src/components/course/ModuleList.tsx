@@ -144,39 +144,37 @@ const ModuleList: React.FC<ModuleListProps> = ({ modules, courseId }) => {
                     
                     <div className="space-y-2">
                       {section.items.map((item) => (
-                        <Link key={item.id} href={`/courses/${courseId}/modules/${module.id}/items/${item.id}`}>
-                          <a className="flex items-center p-3 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                            {/* Type Icon */}
-                            <div className="mr-3">
-                              {getItemIcon(item.type)}
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center">
-                                <span className="font-medium text-sm text-neutral-800 dark:text-white mr-2 truncate">
-                                  {item.title}
+                        <Link key={item.id} href={`/courses/${courseId}/modules/${module.id}/items/${item.id}`} className="flex items-center p-3 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                          {/* Type Icon */}
+                          <div className="mr-3">
+                            {getItemIcon(item.type)}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center">
+                              <span className="font-medium text-sm text-neutral-800 dark:text-white mr-2 truncate">
+                                {item.title}
+                              </span>
+                              
+                              {/* Points */}
+                              {item.points && (
+                                <span className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 py-0.5 px-2 rounded-full">
+                                  {item.points} pts
                                 </span>
-                                
-                                {/* Points */}
-                                {item.points && (
-                                  <span className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 py-0.5 px-2 rounded-full">
-                                    {item.points} pts
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Status & Due Date */}
-                            <div className="flex items-center ml-2">
-                              {item.dueDate && (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 mr-3">
-                                  Due: {new Date(item.dueDate).toLocaleDateString()}
-                                </div>
                               )}
-                              {getStatusIcon(item.status)}
                             </div>
-                          </a>
+                          </div>
+                          
+                          {/* Status & Due Date */}
+                          <div className="flex items-center ml-2">
+                            {item.dueDate && (
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400 mr-3">
+                                Due: {new Date(item.dueDate).toLocaleDateString()}
+                              </div>
+                            )}
+                            {getStatusIcon(item.status)}
+                          </div>
                         </Link>
                       ))}
                     </div>

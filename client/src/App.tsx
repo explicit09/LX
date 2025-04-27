@@ -91,6 +91,18 @@ function Router() {
           }} />
           
           {/* Landing page - Use our new LandingPage component */}
+          {/* Demo route - direct access to AI chatbot demo */}
+          <Route path="/ai-tutor-demo">
+            {() => {
+              const ModuleDetail = lazy(() => import('./pages/course/ModuleDetail'));
+              return (
+                <Suspense fallback={<div>Loading AI Tutor Demo...</div>}>
+                  <ModuleDetail />
+                </Suspense>
+              );
+            }}
+          </Route>
+          
           <Route path="/">
             <LandingPage />
           </Route>
