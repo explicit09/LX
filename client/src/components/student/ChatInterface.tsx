@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Loader2, RefreshCw, Info, Book, BrainCircuit, User } from "lucide-react";
@@ -18,6 +18,20 @@ import { apiRequest } from "@/lib/queryClient";
 // Import logo
 import LogoImage from "@assets/LEARN-X Logo.png";
 
+interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: Date;
+  citations?: Citation[];
+}
+
+interface Citation {
+  text: string;
+  source: string;
+  page?: number;
+}
+
 interface ChatInterfaceProps {
   courseId: number;
   courseName: string;
@@ -25,24 +39,27 @@ interface ChatInterfaceProps {
   onClearChat?: () => void;
 }
 
-interface ChatMessage {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-  sources?: string[];
-  timestamp: Date;
-}
-
-const ChatInterface = ({
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
   courseId,
   courseName,
   initialChatHistory,
   onClearChat,
-}: ChatInterfaceProps) => {
-  const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [isThinking, setIsThinking] = useState(false);
+}) => {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: `Welcome to ${courseName}! I'm your AI learning assistant. I can help you understand the course materials, answer questions, and explore related concepts. How can I help you today?`,
+      role: 'assistant',
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSourcePanel, setShowSourcePanel] = useState(false);
+  const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -75,7 +92,7 @@ const ChatInterface = ({
           timestamp: new Date(item.timestamp),
         },
       ]);
-      setChatHistory(formattedChat);
+      setMessages(formattedChat);
     } else {
       // If no initial history provided, try to fetch it
       refetchHistory();
@@ -100,16 +117,22 @@ const ChatInterface = ({
           timestamp: new Date(item.timestamp),
         },
       ]);
-      setChatHistory(formattedChat);
+      setMessages(formattedChat);
     }
   }, [fetchedHistory]);
 
-  // Scroll to bottom of chat when new messages are added
+  // Auto-scroll to bottom of messages
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Auto-resize input field
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 200)}px`;
     }
-  }, [chatHistory]);
+  }, [input]);
 
   // Send message mutation
   const sendMessage = useMutation({
@@ -119,14 +142,14 @@ const ChatInterface = ({
     },
     onSuccess: (data: ChatItem) => {
       // Add the question and answer to the chat history
-      const userMessage: ChatMessage = {
+      const userMessage: Message = {
         id: `user-${Date.now()}`,
         role: "user",
-        content: message,
+        content: input.trim(),
         timestamp: new Date(),
       };
       
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: Message = {
         id: `assistant-${data.id}`,
         role: "assistant",
         content: data.answer,
@@ -134,9 +157,9 @@ const ChatInterface = ({
         timestamp: new Date(data.timestamp),
       };
       
-      setChatHistory((prev) => [...prev, userMessage, assistantMessage]);
-      setIsThinking(false);
-      setMessage(""); // Clear input field
+      setMessages(prev => [...prev, userMessage, assistantMessage]);
+      setIsLoading(false);
+      setInput(""); // Clear input field
 
       // Invalidate the chat history query to update the cached data
       queryClient.invalidateQueries({queryKey: [`/api/student/courses/${courseId}/chat`]});
@@ -147,165 +170,222 @@ const ChatInterface = ({
         description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
-      setIsThinking(false);
+      setIsLoading(false);
     },
   });
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsThinking(true);
-    sendMessage.mutate(message.trim());
+    if (!input.trim()) return;
+    
+    setIsLoading(true);
+    sendMessage.mutate(input.trim());
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const handleCitationClick = (citation: Citation) => {
+    setActiveCitation(citation);
+    setShowSourcePanel(true);
+  };
+
+  // Format message with citations
+  const formatMessage = (message: Message) => {
+    if (!message.citations) {
+      return <p className="whitespace-pre-wrap">{message.content}</p>;
     }
+
+    // Simple citation formatting
+    return (
+      <div>
+        <p className="whitespace-pre-wrap">{message.content}</p>
+        {message.citations.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Sources:</p>
+            <div className="space-y-1">
+              {message.citations.map((citation, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleCitationClick(citation)}
+                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline block text-left"
+                >
+                  [{index + 1}] {citation.source} {citation.page && `(p. ${citation.page})`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-white rounded-lg overflow-hidden border shadow-sm">
-      {/* Chat header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="mr-3">
-            <img src={LogoImage} alt="LEARN-X Logo" className="h-8 w-8" />
-          </div>
+    <div className="flex h-full bg-white dark:bg-neutral-900 rounded-xl overflow-hidden shadow-lg border border-neutral-200 dark:border-neutral-800">
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Chat header */}
+        <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-lg">Course Assistant</h2>
-            <div className="text-sm text-blue-100">Ask questions about {courseName}</div>
+            <h2 className="text-lg font-semibold">{courseName}</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">AI Learning Assistant</p>
+          </div>
+          <div className="flex space-x-2">
+            <button 
+              className="p-2 rounded-md text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              title="Start a new conversation"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <button 
+              className="p-2 rounded-md text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              title="View conversation history"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => refetchHistory()}
-          disabled={loadingHistory}
-          className="text-white bg-white/10 hover:bg-white/20"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loadingHistory ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Chat messages */}
-      <ScrollArea className="flex-1 p-4 h-[calc(100vh-280px)]">
-        {chatHistory.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-center">
-            <div className="max-w-md p-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50">
-              <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
-                <BrainCircuit className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                AI Course Assistant
-              </h3>
-              <p className="text-gray-600 mb-4">
-                I can help you understand your course materials by answering questions based on the content uploaded by your professor.
-              </p>
-              <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm text-gray-600 mb-4">
-                <p className="font-medium text-blue-700 mb-1">Example questions:</p>
-                <ul className="text-left space-y-2 pl-2">
-                  <li>• "Explain the key concepts from Chapter 3"</li>
-                  <li>• "What are the main arguments in Smith's theory?"</li>
-                  <li>• "Summarize the audio lecture from last week"</li>
-                </ul>
+        
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  message.role === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
+                }`}
+              >
+                {formatMessage(message)}
+                <div className="text-xs mt-1 opacity-70 text-right">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <>
-            {chatHistory.map((msg) => (
-              <div 
-                key={msg.id} 
-                className={`mb-6 ${msg.role === 'assistant' ? 'pl-2' : 'pl-4'}`}
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-neutral-100 dark:bg-neutral-800">
+                <div className="flex space-x-2">
+                  <div className="h-2 w-2 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="h-2 w-2 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="h-2 w-2 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        {/* Input Form */}
+        <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+          <form onSubmit={handleSubmit} className="flex items-end space-x-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+                placeholder="Ask a question about the course materials..."
+                className="input min-h-[44px] max-h-[200px] py-3 pr-10 resize-none"
+                rows={1}
+              />
+              <button
+                type="button"
+                className="absolute right-3 bottom-3 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                title="Upload a file"
               >
-                <div className="flex items-start">
-                  <div 
-                    className={`rounded-full w-8 h-8 flex items-center justify-center mr-3 ${
-                      msg.role === 'assistant' 
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {msg.role === 'assistant' ? (
-                      <BrainCircuit className="h-4 w-4" />
-                    ) : (
-                      <User className="h-4 w-4" />
-                    )}
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="btn-primary h-[44px] w-[44px] flex items-center justify-center rounded-full"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </form>
+          <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400 text-center">
+            Responses are generated based on your course materials
+          </div>
+        </div>
+      </div>
+      
+      {/* Source Panel */}
+      <div 
+        className={`w-96 border-l border-neutral-200 dark:border-neutral-800 transform transition-transform duration-300 ${
+          showSourcePanel ? 'translate-x-0' : 'translate-x-full'
+        } absolute inset-y-0 right-0 lg:relative lg:translate-x-0`}
+      >
+        <div className="h-full flex flex-col bg-neutral-50 dark:bg-neutral-800">
+          <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+            <h3 className="font-medium">Source Details</h3>
+            <button 
+              onClick={() => setShowSourcePanel(false)}
+              className="lg:hidden p-1 rounded-md text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeCitation ? (
+              <div>
+                <div className="mb-4">
+                  <h4 className="text-lg font-medium mb-1">{activeCitation.source}</h4>
+                  {activeCitation.page && (
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Page {activeCitation.page}</p>
+                  )}
+                </div>
+                
+                <div className="p-4 bg-white dark:bg-neutral-700 rounded-lg border border-neutral-200 dark:border-neutral-600 mb-4">
+                  <blockquote className="italic">{activeCitation.text}</blockquote>
+                </div>
+                
+                <div className="bg-white dark:bg-neutral-700 rounded-lg border border-neutral-200 dark:border-neutral-600 overflow-hidden">
+                  <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+                    <h5 className="font-medium">Source Document</h5>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-xs text-gray-500 mb-1 ml-1">
-                      {msg.role === 'assistant' ? 'LEARN-X Assistant' : 'You'}
+                  <div className="p-6 flex justify-center items-center">
+                    {/* Placeholder for PDF viewer */}
+                    <div className="w-full aspect-[3/4] bg-neutral-200 dark:bg-neutral-600 rounded flex items-center justify-center">
+                      <p className="text-neutral-600 dark:text-neutral-300">PDF Preview</p>
                     </div>
-                    <div 
-                      className={`p-4 rounded-lg shadow-sm ${
-                        msg.role === 'assistant' 
-                          ? 'bg-white border border-gray-100 text-gray-800' 
-                          : 'bg-blue-50 text-gray-800'
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                    
-                    {/* Sources section for assistant */}
-                    {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2 flex items-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center text-xs text-blue-500 hover:text-blue-700 cursor-pointer">
-                                <Book className="h-3 w-3 mr-1" />
-                                <span>Sources ({msg.sources.length})</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent align="start" className="max-w-sm bg-blue-900 text-white">
-                              <div className="text-xs font-semibold">Based on these materials:</div>
-                              <ul className="text-xs list-disc pl-4 pt-1">
-                                {msg.sources.map((source, idx) => (
-                                  <li key={idx} className="text-blue-100">{source}</li>
-                                ))}
-                              </ul>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    )}
+                  </div>
+                  <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 flex justify-between">
+                    <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                      Open full document
+                    </button>
+                    <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                      Download
+                    </button>
                   </div>
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </ScrollArea>
-
-      {/* Input area */}
-      <div className="p-4 border-t bg-gray-50">
-        <div className="flex items-end space-x-2">
-          <Textarea
-            placeholder="Ask anything about your course materials..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="min-h-[60px] flex-1 border-gray-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
-            disabled={isThinking}
-          />
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={isThinking || !message.trim()}
-            className="h-[60px] px-5 bg-blue-600 hover:bg-blue-700"
-          >
-            {isThinking ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <div className="h-full flex items-center justify-center text-neutral-500 dark:text-neutral-400 text-center p-4">
+                <p>Select a citation to view the source details</p>
+              </div>
             )}
-          </Button>
-        </div>
-        <div className="text-xs text-gray-500 mt-2 text-center">
-          Powered by OpenAI GPT-4o and course materials
+          </div>
         </div>
       </div>
     </div>

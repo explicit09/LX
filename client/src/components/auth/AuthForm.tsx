@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'wouter';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,280 +36,305 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 interface AuthFormProps {
-  onSuccess?: () => void;
+  onLogin?: (username: string, password: string) => Promise<void>;
+  onRegister?: (username: string, email: string, password: string, role: 'professor' | 'student') => Promise<void>;
+  isLoading?: boolean;
+  error?: string;
 }
 
-const AuthForm = ({ onSuccess }: AuthFormProps) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const AuthForm: React.FC<AuthFormProps> = ({
+  onLogin,
+  onRegister,
+  isLoading = false,
+  error
+}) => {
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const { setUser } = useUser();
-
-  // Login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      role: "professor",
-    },
-  });
-
-  // Register form
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: "",
-      username: "",
-      password: "",
-      role: "professor",
-    },
-  });
-
-  const handleLogin = async (values: LoginFormValues) => {
-    try {
-      setIsSubmitting(true);
-      
-      const response = await apiRequest("POST", "/api/auth/login", values);
-      const userData = await response.json();
-      
-      setUser(userData);
-      
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${userData.name}!`,
-      });
-      
-      if (onSuccess) {
-        onSuccess();
+  
+  // Form states
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'professor' | 'student'>('student');
+  
+  // Form validation states
+  const [formErrors, setFormErrors] = useState<{
+    username?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
+  
+  // Check if the URL has a role query parameter
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get('role');
+    if (roleParam === 'professor' || roleParam === 'student') {
+      setRole(roleParam);
+      setIsLoginMode(false);
+    }
+  }, []);
+  
+  // Validate form
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+    
+    // Username validation
+    if (!username.trim()) {
+      errors.username = 'Username is required';
+    } else if (username.length < 3) {
+      errors.username = 'Username must be at least 3 characters';
+    }
+    
+    // Email validation (registration only)
+    if (!isLoginMode) {
+      if (!email.trim()) {
+        errors.email = 'Email is required';
+      } else if (!/\S+@\S+\.\S+/.test(email)) {
+        errors.email = 'Email is invalid';
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: "Invalid credentials. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    }
+    
+    // Password validation
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    // Confirm password (registration only)
+    if (!isLoginMode && password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    try {
+      if (isLoginMode && onLogin) {
+        await onLogin(username, password);
+      } else if (!isLoginMode && onRegister) {
+        await onRegister(username, email, password, role);
+      }
+    } catch (err) {
+      console.error('Authentication error:', err);
     }
   };
-
-  const handleRegister = async (values: RegisterFormValues) => {
-    try {
-      setIsSubmitting(true);
-      
-      const response = await apiRequest("POST", "/api/auth/register", values);
-      const userData = await response.json();
-      
-      setUser(userData);
-      
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${userData.name}!`,
-      });
-      
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: "Could not create account. Username may already exist.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-primary mb-2">LINK-X</h1>
-        <p className="text-gray-600">Course Assistant Platform</p>
-      </div>
-      
-      <div className="bg-white shadow-md rounded-lg p-6">
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 mb-6">
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`px-4 py-2 font-medium ${
-              isLogin
-                ? "text-primary border-b-2 border-primary"
-                : "text-gray-500"
-            }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`px-4 py-2 font-medium ${
-              !isLogin
-                ? "text-primary border-b-2 border-primary"
-                : "text-gray-500"
-            }`}
-          >
-            Register
-          </button>
+    <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
+      <div className="w-full max-w-md">
+        {/* Logo and branding */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-600 inline-block">
+            LINK-X
+          </h1>
+          <p className="text-neutral-600 dark:text-neutral-400 mt-2">
+            {isLoginMode ? 'Sign in to your account' : 'Create a new account'}
+          </p>
         </div>
         
-        {/* Login Form */}
-        {isLogin ? (
-          <Form {...loginForm}>
-            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-              <FormField
-                control={loginForm.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+        {/* Auth card */}
+        <div className="card shadow-lg border border-neutral-200 dark:border-neutral-800">
+          {/* Auth tabs */}
+          <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+            <button
+              className={`flex-1 py-4 text-center font-medium transition-colors ${
+                isLoginMode
+                  ? 'text-primary-700 dark:text-primary-400 border-b-2 border-primary-500'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-primary-700 dark:hover:text-primary-400'
+              }`}
+              onClick={() => setIsLoginMode(true)}
+              disabled={isLoading}
+            >
+              Log In
+            </button>
+            <button
+              className={`flex-1 py-4 text-center font-medium transition-colors ${
+                !isLoginMode
+                  ? 'text-primary-700 dark:text-primary-400 border-b-2 border-primary-500'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-primary-700 dark:hover:text-primary-400'
+              }`}
+              onClick={() => setIsLoginMode(false)}
+              disabled={isLoading}
+            >
+              Register
+            </button>
+          </div>
+          
+          {/* Form */}
+          <div className="p-6">
+            {error && (
+              <div className="mb-4 p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit}>
+              {/* Username field */}
+              <div className="mb-4">
+                <label htmlFor="username" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className={`input ${formErrors.username ? 'border-red-500 dark:border-red-400' : ''}`}
+                  placeholder="Your username"
+                  disabled={isLoading}
+                />
+                {formErrors.username && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.username}</p>
                 )}
-              />
+              </div>
               
-              <FormField
-                control={loginForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <a href="#" className="text-xs text-primary hover:underline mt-1 inline-block">
-                      Forgot password?
-                    </a>
-                    <FormMessage />
-                  </FormItem>
+              {/* Email field (registration only) */}
+              {!isLoginMode && (
+                <div className="mb-4">
+                  <label htmlFor="email" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`input ${formErrors.email ? 'border-red-500 dark:border-red-400' : ''}`}
+                    placeholder="Your email address"
+                    disabled={isLoading}
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.email}</p>
+                  )}
+                </div>
+              )}
+              
+              {/* Password field */}
+              <div className="mb-4">
+                <label htmlFor="password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`input ${formErrors.password ? 'border-red-500 dark:border-red-400' : ''}`}
+                  placeholder="Your password"
+                  disabled={isLoading}
+                />
+                {formErrors.password && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.password}</p>
                 )}
-              />
+              </div>
               
-              <FormField
-                control={loginForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="professor" id="role-professor" />
-                          <label htmlFor="role-professor" className="text-sm">I'm a Professor</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="student" id="role-student" />
-                          <label htmlFor="role-student" className="text-sm">I'm a Student</label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Confirm Password field (registration only) */}
+              {!isLoginMode && (
+                <div className="mb-4">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`input ${formErrors.confirmPassword ? 'border-red-500 dark:border-red-400' : ''}`}
+                    placeholder="Confirm your password"
+                    disabled={isLoading}
+                  />
+                  {formErrors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.confirmPassword}</p>
+                  )}
+                </div>
+              )}
               
-              <Button
+              {/* Role selection (registration only) */}
+              {!isLoginMode && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                    I am a:
+                  </label>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="role"
+                        checked={role === 'student'}
+                        onChange={() => setRole('student')}
+                        className="h-4 w-4 text-primary-600 dark:text-primary-500 border-neutral-300 dark:border-neutral-700 focus:ring-primary-500 dark:focus:ring-primary-400"
+                        disabled={isLoading}
+                      />
+                      <span className="ml-2 text-neutral-700 dark:text-neutral-300">Student</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="role"
+                        checked={role === 'professor'}
+                        onChange={() => setRole('professor')}
+                        className="h-4 w-4 text-primary-600 dark:text-primary-500 border-neutral-300 dark:border-neutral-700 focus:ring-primary-500 dark:focus:ring-primary-400"
+                        disabled={isLoading}
+                      />
+                      <span className="ml-2 text-neutral-700 dark:text-neutral-300">Professor</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+              
+              {/* Submit button */}
+              <button
                 type="submit"
-                className="w-full"
-                disabled={isSubmitting}
+                className="btn-primary w-full py-3 rounded-md"
+                disabled={isLoading}
               >
-                {isSubmitting ? "Logging in..." : "Login"}
-              </Button>
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : isLoginMode ? 'Log In' : 'Create Account'}
+              </button>
+              
+              {/* Login helpers */}
+              {isLoginMode && (
+                <div className="mt-4 text-center">
+                  <a href="#forgot-password" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                    Forgot your password?
+                  </a>
+                </div>
+              )}
             </form>
-          </Form>
-        ) : (
-          <Form {...registerForm}>
-            <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
-              <FormField
-                control={registerForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={registerForm.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={registerForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Password must be at least 8 characters
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={registerForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="professor" id="reg-role-professor" />
-                          <label htmlFor="reg-role-professor" className="text-sm">I'm a Professor</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="student" id="reg-role-student" />
-                          <label htmlFor="reg-role-student" className="text-sm">I'm a Student</label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
-          </Form>
-        )}
+          </div>
+        </div>
+        
+        {/* Footer links */}
+        <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
+          <div className="flex justify-center space-x-4">
+            <a href="#terms" className="hover:text-primary-600 dark:hover:text-primary-400">Terms</a>
+            <a href="#privacy" className="hover:text-primary-600 dark:hover:text-primary-400">Privacy</a>
+            <a href="#help" className="hover:text-primary-600 dark:hover:text-primary-400">Help</a>
+          </div>
+        </div>
       </div>
     </div>
   );
