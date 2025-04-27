@@ -49,25 +49,56 @@ export default function SimpleAuth() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("POST", "/api/login", {
+      console.log("Attempting login with:", formState.username);
+      
+      // Test credentials directly instead of using role selection
+      // tmbuwa09@gmail.com is registered as a professor
+      const loginData = {
         username: formState.username,
         password: formState.password
+      };
+      
+      console.log("Sending login request with data:", loginData);
+      
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(loginData),
+        credentials: "include"
       });
       
+      console.log("Login response status:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        // Handle non-200 responses
+        const errorText = await response.text();
+        console.error("Login error response:", errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || "Login failed");
+        } catch (e) {
+          throw new Error("Login failed: " + response.statusText);
+        }
+      }
+      
       const userData = await response.json();
+      console.log("Login successful, user data:", userData);
+      
       setUser(userData);
       
       toast({
         title: "Login successful",
-        description: `Welcome back, ${userData.name}!`,
+        description: `Welcome back, ${userData.name || "user"}!`,
       });
       
+      // Use appropriate role-based redirect
       navigate(userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Invalid credentials. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid credentials. Please try again.",
         variant: "destructive",
       });
     } finally {
