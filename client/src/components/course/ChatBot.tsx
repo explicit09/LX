@@ -23,6 +23,7 @@ interface ChatBotProps {
   onSourceClick?: (source: { title: string; page?: number }) => void;
   collapsed?: boolean;
   onCollapseChange?: (collapsed: boolean) => void;
+  demoMode?: boolean;
 }
 
 const ChatBot: React.FC<ChatBotProps> = ({
@@ -31,7 +32,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
   initialMessages = [],
   onSourceClick,
   collapsed = false,
-  onCollapseChange
+  onCollapseChange,
+  demoMode = false
 }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -81,8 +83,13 @@ const ChatBot: React.FC<ChatBotProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Determine which API endpoint to use based on mode
+      const apiEndpoint = demoMode 
+        ? `/api/demo/ask` 
+        : `/api/student/courses/${moduleId}/ask`;
+      
       // Make API call to get AI response
-      const response = await fetch(`/api/student/courses/${moduleId}/ask`, {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

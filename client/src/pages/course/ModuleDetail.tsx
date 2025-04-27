@@ -172,10 +172,11 @@ export default function ModuleDetail() {
         <div className="md:w-1/3 border-t md:border-t-0 md:border-l border-neutral-200 dark:border-neutral-700">
           <ChatBot 
             moduleTitle={module.title}
-            moduleId={parseInt(moduleId as string)}
+            moduleId={parseInt(moduleId as string) || 1}
             onSourceClick={handleSourceClick}
             collapsed={chatBotCollapsed}
             onCollapseChange={setChatBotCollapsed}
+            demoMode={true} // Enable demo mode for direct access
           />
         </div>
       </div>

@@ -462,6 +462,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Demo endpoint for AI Tutor (publicly accessible)
+  app.post("/api/demo/ask", async (req, res, next) => {
+    try {
+      const { question } = req.body;
+      const courseId = 1; // Fixed course ID for demo
+      
+      if (!question || typeof question !== "string") {
+        return res.status(400).json({ message: "Question is required" });
+      }
+      
+      try {
+        // Retrieve context from vector database
+        const vectorDbPath = getVectorDBPath(courseId);
+        const { content: context, sources } = await queryVectorStore(vectorDbPath, question);
+        
+        // Generate answer using OpenAI
+        const answer = await summarizeWithLLM(question, context);
+        
+        // Return the answer without storing in database
+        res.json({
+          id: Date.now(),
+          question,
+          answer,
+          sources: sources.join(","),
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        const error = err as Error;
+        console.error("Error processing AI request:", error);
+        res.status(500).json({ 
+          message: "Error processing your question",
+          error: error.message || "Unknown error" 
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Create and return the HTTP server
   const httpServer = createServer(app);
   return httpServer;
