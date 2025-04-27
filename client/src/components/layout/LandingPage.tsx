@@ -1,5 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
+
+// Import logo
+import LogoImage from "@assets/LEARN-X Logo.png";
 
 const LandingPage: React.FC = () => {
   return (
@@ -15,7 +18,7 @@ const LandingPage: React.FC = () => {
               Through AI-Powered Conversations
             </h1>
             <p className="text-xl md:text-2xl text-neutral-700 dark:text-neutral-300 mb-8 animate-fade-in animate-delay-200">
-              LINK-X turns course materials into interactive AI experiences that adapt to each student's needs.
+              LEARN-X turns course materials into interactive AI experiences that adapt to each student's needs.
               Professors upload content, students explore through conversation.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in animate-delay-300">
@@ -40,13 +43,13 @@ const LandingPage: React.FC = () => {
       <section className="py-16 bg-neutral-50 dark:bg-neutral-900">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-center mb-16">How LINK-X Works</h2>
+            <h2 className="text-center mb-16">How LEARN-X Works</h2>
             
             <div className="grid md:grid-cols-2 gap-12 items-center mb-24">
               <div className="order-2 md:order-1">
                 <h3 className="mb-4">For Professors</h3>
                 <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-6">
-                  Upload your course materials securely. LINK-X processes your PDFs, audio lectures, and more into 
+                  Upload your course materials securely. LEARN-X processes your PDFs, audio lectures, and more into 
                   a searchable knowledge base with smart citation tracking.
                 </p>
                 <ul className="space-y-3">
@@ -101,7 +104,7 @@ const LandingPage: React.FC = () => {
                 <h3 className="mb-4">For Students</h3>
                 <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-6">
                   Learn through conversation. Ask questions about your course materials and get answers with 
-                  source citations. LINK-X understands context and adapts to your learning style.
+                  source citations. LEARN-X understands context and adapts to your learning style.
                 </p>
                 <ul className="space-y-3">
                   {[
@@ -136,7 +139,7 @@ const LandingPage: React.FC = () => {
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  quote: "LINK-X has transformed how I teach. Students engage with the material more deeply and come to class with better questions.",
+                  quote: "LEARN-X has transformed how I teach. Students engage with the material more deeply and come to class with better questions.",
                   name: "Dr. Sarah Chen",
                   title: "Professor of Computer Science",
                   image: "https://randomuser.me/api/portraits/women/44.jpg"
@@ -148,7 +151,7 @@ const LandingPage: React.FC = () => {
                   image: "https://randomuser.me/api/portraits/men/32.jpg"
                 },
                 {
-                  quote: "As a TA, LINK-X helps me identify what concepts students are struggling with before our review sessions.",
+                  quote: "As a TA, LEARN-X helps me identify what concepts students are struggling with before our review sessions.",
                   name: "Aisha Johnson",
                   title: "Teaching Assistant",
                   image: "https://randomuser.me/api/portraits/women/65.jpg"
@@ -182,7 +185,7 @@ const LandingPage: React.FC = () => {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="mb-6">Ready to Transform Your Learning Experience?</h2>
             <p className="text-xl opacity-90 mb-8">
-              Join thousands of professors and students who are using LINK-X to create more engaging and effective learning experiences.
+              Join thousands of professors and students who are using LEARN-X to create more engaging and effective learning experiences.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

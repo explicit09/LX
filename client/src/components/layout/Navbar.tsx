@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'wouter';
 
 interface NavLink {
   name: string;
@@ -16,7 +16,7 @@ const navLinks: NavLink[] = [
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
+  const [location] = useLocation();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -49,8 +49,8 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-600">
-              LINK-X
+            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              LEARN-X
             </span>
           </Link>
 
@@ -61,9 +61,9 @@ const Navbar: React.FC = () => {
                 key={link.name}
                 to={link.href}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  location.pathname === link.href 
-                    ? 'text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-900/40' 
-                    : 'text-neutral-700 hover:text-primary-700 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:text-primary-400 dark:hover:bg-neutral-800/70'
+                  location === link.href 
+                    ? 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/40' 
+                    : 'text-neutral-700 hover:text-blue-700 hover:bg-blue-50 dark:text-neutral-200 dark:hover:text-blue-400 dark:hover:bg-neutral-800/70'
                 }`}
               >
                 {link.name}
@@ -73,10 +73,10 @@ const Navbar: React.FC = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/login" className="text-sm font-medium text-neutral-700 hover:text-primary-700 dark:text-neutral-200 dark:hover:text-primary-400">
+            <Link to="/auth" className="text-sm font-medium text-neutral-700 hover:text-blue-700 dark:text-neutral-200 dark:hover:text-blue-400">
               Log in
             </Link>
-            <Link to="/register" className="btn-primary px-4 py-2 rounded-md text-sm">
+            <Link to="/auth" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:shadow-md transition-all">
               Get Started
             </Link>
           </div>
@@ -84,7 +84,7 @@ const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <button
             type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-neutral-700 hover:text-primary-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:text-primary-400 dark:hover:bg-neutral-800 focus:outline-none"
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-neutral-700 hover:text-blue-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:text-blue-400 dark:hover:bg-neutral-800 focus:outline-none"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             <span className="sr-only">Open main menu</span>
@@ -113,9 +113,9 @@ const Navbar: React.FC = () => {
               key={link.name}
               to={link.href}
               className={`block px-4 py-2 rounded-md text-base font-medium ${
-                location.pathname === link.href 
-                  ? 'text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-900/40' 
-                  : 'text-neutral-700 hover:text-primary-700 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:text-primary-400 dark:hover:bg-neutral-800/70'
+                location === link.href 
+                  ? 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/40' 
+                  : 'text-neutral-700 hover:text-blue-700 hover:bg-blue-50 dark:text-neutral-200 dark:hover:text-blue-400 dark:hover:bg-neutral-800/70'
               }`}
             >
               {link.name}
