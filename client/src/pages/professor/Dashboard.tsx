@@ -32,7 +32,7 @@ const ProfessorDashboard = () => {
   const [newCourse, setNewCourse] = useState({
     name: '',
     description: '',
-    accessCode: generateRandomCode()
+    accessCode: generateAccessCode()
   });
   
   // Demo courses data for testing
@@ -81,14 +81,17 @@ const ProfessorDashboard = () => {
   // Use demo courses for display
   const courses = apiCourses.length > 0 ? apiCourses : demoCourses;
   
-  // Generate a random access code
-  function generateRandomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
+  // Generate an access code based on course name or timestamp
+  function generateAccessCode(courseName: string = '') {
+    // Use the first 3 characters of course name (uppercase) or current time for uniqueness
+    const prefix = courseName.length > 0 
+      ? courseName.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, 'X')
+      : 'CRS';
+    
+    // Use timestamp for uniqueness - last 3 digits of current timestamp
+    const timestamp = Date.now().toString().slice(-3);
+    
+    return `${prefix}${timestamp}`;
   }
   
   // Filter courses based on search term
@@ -128,7 +131,7 @@ const ProfessorDashboard = () => {
       setNewCourse({
         name: '',
         description: '',
-        accessCode: generateRandomCode()
+        accessCode: generateAccessCode()
       });
       setIsCreateDialogOpen(false);
       
@@ -230,7 +233,7 @@ const ProfessorDashboard = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setNewCourse(prev => ({ ...prev, accessCode: generateRandomCode() }))}
+                      onClick={() => setNewCourse(prev => ({ ...prev, accessCode: generateAccessCode(prev.name) }))}
                     >
                       Generate
                     </Button>

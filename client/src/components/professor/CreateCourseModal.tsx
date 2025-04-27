@@ -25,14 +25,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
-// Helper function to generate a random access code
-function generateAccessCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+// Helper function to generate an access code based on course name and timestamp
+function generateAccessCode(courseName: string = ''): string {
+  // Use the first 3 characters of course name (uppercase) or placeholder if no name
+  const prefix = courseName.length > 0 
+    ? courseName.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, 'X')
+    : 'CRS';
+    
+  // Use timestamp for uniqueness - last 3 digits of current timestamp
+  const timestamp = Date.now().toString().slice(-3);
+  
+  return `${prefix}${timestamp}`;
 }
 
 // Form schema
@@ -82,10 +85,10 @@ const CreateCourseModal = ({
       
       // Create a mock course object with the form values
       const newCourse = {
-        id: Math.floor(Math.random() * 10000) + 100, // Generate a random ID
+        id: Date.now(), // Use timestamp as a more reliable unique ID
         name: values.name,
         description: values.description || "",
-        accessCode: generateAccessCode(),
+        accessCode: generateAccessCode(values.name),
         professorId: 1, // Current user ID
         createdAt: new Date().toISOString(),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
