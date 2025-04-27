@@ -33,6 +33,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,6 +42,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (!files?.length) return;
     
     const file = files[0];
+    setSelectedFile(file);
     
     // Check file type
     const fileExt = `.${file.name.split('.').pop()?.toLowerCase()}`;
@@ -63,11 +65,25 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setIsUploading(true);
     setError(null);
     
+    // Upload the file (moved to useEffect)
+  }, [allowedFileTypes, maxFileSize, onUploadError]);
+
+  // Handle drag events
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  // Effect to handle file upload when selectedFile changes
+  React.useEffect(() => {
+    if (!selectedFile || !isUploading) return;
+    
     // Upload the file
     const uploadFile = () => {
       // Create form data
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
       formData.append('courseId', courseId.toString());
       
       // Use XMLHttpRequest to track upload progress
@@ -91,7 +107,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               id: response.id.toString(),
               name: response.name,
               type: response.type,
-              size: file.size,
+              size: selectedFile.size,
               uploadDate: new Date(response.uploadDate),
               url: response.path,
             };
@@ -125,14 +141,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     
     // Start the upload process
     uploadFile();
-  }, [allowedFileTypes, maxFileSize, onUploadError, onUploadSuccess, courseId, file]);
-
-  // Handle drag events
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
+  }, [selectedFile, isUploading, courseId, onUploadError, onUploadSuccess]);
 
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
