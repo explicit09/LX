@@ -318,16 +318,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate total questions
       const totalQuestions = allChatItems.length;
       
-      // Extract common topics from questions
-      // For demo purposes, we'll extract basic keywords from questions
+      // Extract common topics from questions using NLP-inspired approach
       const topicCounts: Record<string, number> = {};
-      const keywords = ['ethics', 'leadership', 'theory', 'example', 'definition', 'concept', 'application'];
       
+      // Extract meaningful terms from questions
       allChatItems.forEach(item => {
-        keywords.forEach(keyword => {
-          if (item.question.toLowerCase().includes(keyword)) {
-            topicCounts[keyword] = (topicCounts[keyword] || 0) + 1;
-          }
+        const question = item.question.toLowerCase();
+        
+        // Split into words and remove common stop words
+        const stopWords = new Set(['and', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'can', 'could', 'of', 'from', 'why', 'what', 'when', 'where', 'how', 'which', 'who', 'whom']);
+        
+        // Extract potential topics (words with 4+ chars that aren't stop words)
+        const words = question.replace(/[^\w\s]/g, ' ').split(/\s+/);
+        const potentialTopics = words
+          .filter(word => word.length >= 4 && !stopWords.has(word))
+          .map(word => word.trim());
+          
+        // Count occurrences of potential topics
+        potentialTopics.forEach(topic => {
+          topicCounts[topic] = (topicCounts[topic] || 0) + 1;
         });
       });
       
@@ -372,15 +381,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter chat items for this student
         const studentChatItems = allChatItems.filter(item => item.studentId === student.id);
         
-        // Extract topics from questions (simplified)
+        // Extract topics from questions using NLP-inspired approach
         const topicCounts: Record<string, number> = {};
-        const keywords = ['ethics', 'leadership', 'theory', 'example', 'definition', 'concept', 'application'];
         
         studentChatItems.forEach(item => {
-          keywords.forEach(keyword => {
-            if (item.question.toLowerCase().includes(keyword)) {
-              topicCounts[keyword] = (topicCounts[keyword] || 0) + 1;
-            }
+          const question = item.question.toLowerCase();
+          
+          // Split into words and remove common stop words
+          const stopWords = new Set(['and', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'can', 'could', 'of', 'from', 'why', 'what', 'when', 'where', 'how', 'which', 'who', 'whom']);
+          
+          // Extract potential topics (words with 4+ chars that aren't stop words)
+          const words = question.replace(/[^\w\s]/g, ' ').split(/\s+/);
+          const potentialTopics = words
+            .filter(word => word.length >= 4 && !stopWords.has(word))
+            .map(word => word.trim());
+            
+          // Count occurrences of potential topics
+          potentialTopics.forEach(topic => {
+            topicCounts[topic] = (topicCounts[topic] || 0) + 1;
           });
         });
         

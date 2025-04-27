@@ -11,7 +11,7 @@ interface CourseCardProps {
   isProfessor?: boolean;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0, isProfessor = false }) => {
+const CourseCard: React.FC<CourseCardProps> = ({ course, newItems, isProfessor = false }) => {
   // Format date for display
   const formattedDate = course.startDate 
     ? formatDistanceToNow(new Date(course.startDate), { addSuffix: true })
@@ -36,7 +36,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0, isProfess
             {course.name}
           </h3>
           
-          {newItems > 0 && (
+          {newItems && newItems > 0 && (
             <Badge variant="default" className="ml-2 bg-blue-500 hover:bg-blue-600">
               {newItems} New
             </Badge>

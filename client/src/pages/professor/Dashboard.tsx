@@ -272,7 +272,6 @@ const ProfessorDashboard = () => {
               key={course.id} 
               course={course} 
               isProfessor={true}
-              newItems={Math.floor(Math.random() * 4)} // Random number for demo
             />
           ))}
           
