@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import { useUser } from "./lib/user-context";
+import { User } from "./lib/types";
 
 // Import pages
 import SimpleAuth from "@/pages/SimpleAuth";
@@ -23,9 +24,29 @@ import StudentCourseChat from "@/pages/student/CourseChat";
 import StudentChatHistory from "@/pages/student/ChatHistory";
 
 function Router() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, setUser } = useUser();
   const [location, setLocation] = useLocation();
 
+  // TEMPORARY: Create a demo user for testing
+  useEffect(() => {
+    if (!user) {
+      const demoUser: User = {
+        id: 1,
+        username: "professor@example.com",
+        name: "Demo Professor",
+        role: "professor", 
+        createdAt: new Date().toISOString()
+      };
+      setUser(demoUser);
+      
+      // Automatically redirect to the professor dashboard for testing
+      if (location === "/" || location === "/auth") {
+        setLocation("/professor/dashboard");
+      }
+    }
+  }, []);
+
+  // We'll keep this simple for now
   const isProtectedRoute = 
     location.startsWith("/professor/") || 
     location.startsWith("/student/");
@@ -33,24 +54,6 @@ function Router() {
   const isPublicRoute = 
     location === "/" || 
     location === "/auth";
-  
-  useEffect(() => {
-    if (!isLoading) {
-      // Redirect to auth if trying to access protected route while not logged in
-      if (!user && isProtectedRoute) {
-        setLocation("/auth");
-      }
-      
-      // If logged in and on auth page, redirect to dashboard
-      if (user && location === "/auth") {
-        setLocation(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
-      }
-    }
-  }, [user, isLoading, location, setLocation, isProtectedRoute]);
-
-  if (isLoading && isProtectedRoute) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
-  }
 
   return (
     <Switch>

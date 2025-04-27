@@ -22,25 +22,53 @@ const ProfessorDashboard = () => {
   const [uploadMaterialsModalOpen, setUploadMaterialsModalOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>();
 
-  // Fetch courses data
-  const { 
-    data: courses = [], 
-    isLoading: coursesLoading, 
-    refetch: refetchCourses 
-  } = useQuery<Course[]>({
-    queryKey: ["/api/professor/courses"],
-  });
+  // Mock courses data for demo
+  const [courses, setCourses] = useState<Course[]>([
+    {
+      id: 1,
+      name: "Introduction to Computer Science",
+      description: "Learn the fundamentals of computer science and programming",
+      accessCode: "CS101",
+      professorId: 1,
+      createdAt: new Date().toISOString(),
+      studentCount: 24,
+      materialCount: 5
+    },
+    {
+      id: 2,
+      name: "Advanced Machine Learning",
+      description: "Deep dive into neural networks and reinforcement learning",
+      accessCode: "ML202",
+      professorId: 1,
+      createdAt: new Date().toISOString(),
+      studentCount: 18,
+      materialCount: 12
+    }
+  ]);
+  const coursesLoading = false;
+  const refetchCourses = () => console.log("Refetching courses...");
 
-  // Fetch recent materials
-  const { 
-    data: recentMaterials = [], 
-    isLoading: materialsLoading, 
-    refetch: refetchMaterials 
-  } = useQuery<Material[]>({
-    queryKey: ["/api/recent-materials"],
-    // This endpoint doesn't exist yet, but we're mocking it for now
-    enabled: false, // Disable until the endpoint is implemented
-  });
+  // Mock materials data for demo
+  const [recentMaterials, setRecentMaterials] = useState<Material[]>([
+    {
+      id: 1,
+      courseId: 1,
+      name: "Introduction to Algorithms.pdf",
+      type: "pdf",
+      path: "/uploads/pdfs/intro-algorithms.pdf",
+      uploadDate: new Date().toISOString()
+    },
+    {
+      id: 2,
+      courseId: 1,
+      name: "Lecture 1 - Programming Basics.mp3",
+      type: "audio",
+      path: "/uploads/audio/lecture-1.mp3",
+      uploadDate: new Date().toISOString()
+    }
+  ]);
+  const materialsLoading = false;
+  const refetchMaterials = () => console.log("Refetching materials...");
 
   const handleCreateCourse = () => {
     setCreateCourseModalOpen(true);
