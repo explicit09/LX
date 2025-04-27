@@ -168,6 +168,14 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(chatHistory.timestamp);
   }
+  
+  async getCourseChatHistory(courseId: number): Promise<ChatItem[]> {
+    return db
+      .select()
+      .from(chatHistory)
+      .where(eq(chatHistory.courseId, courseId))
+      .orderBy(chatHistory.timestamp);
+  }
 }
 
 export const storage = new DatabaseStorage();

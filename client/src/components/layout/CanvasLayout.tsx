@@ -1,32 +1,45 @@
 import React, { ReactNode } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home, ArrowLeft } from 'lucide-react';
 
 interface BreadcrumbItem {
   label: string;
   path: string;
 }
 
-interface CanvasLayoutProps {
+export interface CanvasLayoutProps {
   title: string;
   children: ReactNode;
   breadcrumbs?: BreadcrumbItem[];
   rightSidebar?: ReactNode;
+  showBack?: boolean;
+  backTo?: string;
 }
 
 const CanvasLayout: React.FC<CanvasLayoutProps> = ({
   title,
   children,
   breadcrumbs,
-  rightSidebar
+  rightSidebar,
+  showBack = false,
+  backTo = '/'
 }) => {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-neutral-50 dark:bg-neutral-900">
       {/* Page Header */}
       <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
         <div className="max-w-screen-2xl mx-auto px-4 py-3">
-          {/* Breadcrumbs */}
-          {breadcrumbs && breadcrumbs.length > 0 && (
+          {/* Back Button or Breadcrumbs */}
+          {showBack ? (
+            <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+              <Link href={backTo}>
+                <a className="flex items-center hover:text-neutral-800 dark:hover:text-white">
+                  <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                  Back
+                </a>
+              </Link>
+            </div>
+          ) : breadcrumbs && breadcrumbs.length > 0 && (
             <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400 mb-2">
               <Link href="/">
                 <a className="flex items-center hover:text-neutral-800 dark:hover:text-white">
