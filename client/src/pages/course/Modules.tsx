@@ -58,47 +58,48 @@ const CourseModules = () => {
       prerequisites: ['START HERE'],
       sections: [
         {
-          title: 'Prep Work',
+          title: 'Leadership Fundamentals',
           items: [
             {
               id: 201,
-              title: 'Reading: Chapter 1 - Foundations of Leadership',
+              title: 'What is Leadership?',
               type: 'reading' as const,
-              status: 'in-progress' as const
+              status: 'completed' as const
             },
             {
               id: 202,
-              title: 'Knowledge Check 1.1',
+              title: 'Leadership Styles',
+              type: 'video' as const,
+              status: 'completed' as const
+            },
+            {
+              id: 203,
+              title: 'Leadership Assessment',
               type: 'quiz' as const,
               dueDate: '2025-05-15T23:59:00',
               points: 10,
-              status: 'not-started' as const
+              status: 'in-progress' as const
             }
           ]
         },
         {
-          title: 'Class Material',
+          title: 'Team Dynamics',
           items: [
             {
-              id: 203,
-              title: 'Lecture: Introduction to Leadership Styles',
+              id: 204,
+              title: 'Building Effective Teams',
+              type: 'reading' as const,
+              status: 'not-started' as const
+            },
+            {
+              id: 205,
+              title: 'Team Performance Factors',
               type: 'video' as const,
               status: 'not-started' as const
             },
             {
-              id: 204,
-              title: 'Case Study: Team Dynamics at TechCorp',
-              type: 'reading' as const,
-              status: 'not-started' as const
-            }
-          ]
-        },
-        {
-          title: 'Assignments',
-          items: [
-            {
-              id: 205,
-              title: 'Leadership Self-Assessment',
+              id: 206,
+              title: 'Team Analysis Assignment',
               type: 'assignment' as const,
               dueDate: '2025-05-20T23:59:00',
               points: 15,
@@ -108,6 +109,7 @@ const CourseModules = () => {
         }
       ]
     },
+
     {
       id: 3,
       title: '02 - Moral Reasoning',
