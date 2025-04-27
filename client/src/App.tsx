@@ -36,12 +36,21 @@ function Router() {
   // Check if we should show navbar (not on landing page or auth)
   useEffect(() => {
     const noNavbarRoutes = ['/', '/auth'];
-    setShowNavbar(!noNavbarRoutes.includes(location));
+    const showNavbarRoutes = ['/ai-tutor-demo']; // Routes where we want navbar even when not logged in
+    
+    if (showNavbarRoutes.includes(location)) {
+      setShowNavbar(true);
+    } else {
+      setShowNavbar(!noNavbarRoutes.includes(location));
+    }
   }, [location]);
 
   // Redirect to auth page if not logged in
   useEffect(() => {
-    if (!user && !isLoading && location !== "/" && location !== "/auth") {
+    // List of public routes that don't require authentication
+    const publicRoutes = ['/', '/auth', '/ai-tutor-demo'];
+    
+    if (!user && !isLoading && !publicRoutes.includes(location)) {
       // Redirect to auth page if trying to access protected routes
       setLocation("/auth");
     }
