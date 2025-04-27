@@ -9,17 +9,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/lib/user-context';
-
-// Todo item types
-interface TodoItem {
-  id: number;
-  title: string;
-  dueDate: string;
-  courseId: number;
-  courseName: string;
-  type: 'assignment' | 'quiz' | 'reading';
-  completed: boolean;
-}
+import { TodoItem } from '@/lib/types';
 
 interface TodoListProps {
   items?: TodoItem[];

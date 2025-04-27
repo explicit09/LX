@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Course } from '@/lib/types';
 import { Calendar, Users, FileText, ExternalLink, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,6 +12,8 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ course, newItems, isProfessor = false }) => {
+  const [location, navigate] = useLocation();
+  
   // Format date for display
   const formattedDate = course.startDate 
     ? formatDistanceToNow(new Date(course.startDate), { addSuffix: true })
@@ -25,9 +27,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, newItems, isProfessor =
   return (
     <div 
       className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden h-full flex flex-col hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors cursor-pointer"
-      onClick={() => window.location.href = isProfessor 
-        ? `/professor/courses/${course.id}` 
-        : `/courses/${course.id}/modules`}
+      onClick={() => navigate(isProfessor
+        ? `/professor/courses/${course.id}`
+        : `/courses/${course.id}/modules`)}
     >
       {/* Card Header */}
       <div className="p-5 border-b border-neutral-200 dark:border-neutral-700">

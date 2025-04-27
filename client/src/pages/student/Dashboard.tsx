@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/lib/user-context';
 import { Course } from '@/lib/types';
+import { useLocation } from 'wouter';
 import CanvasLayout from '@/components/layout/CanvasLayout';
 import CourseCard from '@/components/course/CourseCard';
 import TodoList from '@/components/dashboard/TodoList';
@@ -51,8 +52,8 @@ const StudentDashboard = () => {
       {/* Continual Learning Banner */}
       <ContinualLearningBanner 
         coursesInProgress={courses.length} 
-        completionPercentage={courses.reduce((acc, course) => 
-          acc + (course.completionPercentage || 0), 0) / (courses.length || 1)}
+        completionPercentage={Math.round(courses.reduce((acc, course) => 
+          acc + (course.completionPercentage || 0), 0) / (courses.length || 1))}
         timeSpentThisWeek={courses.reduce((acc, course) => 
           acc + (course.timeSpentThisWeek || 0), 0)}
       />
