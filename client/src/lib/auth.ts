@@ -1,6 +1,9 @@
 import { apiRequest } from "./queryClient";
 import { User } from "./types";
 
+// Storage key for persistent authentication
+const AUTH_STORAGE_KEY = 'eduquest_user';
+
 /**
  * Authenticates a user with the provided credentials
  */
@@ -12,7 +15,10 @@ export async function loginUser(username: string, password: string, role: "profe
       role
     });
     
-    return await response.json();
+    const user = await response.json();
+    // Save to local storage for persistence
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   } catch (error) {
     console.error("Login error:", error);
     throw new Error("Failed to login. Please check your credentials and try again.");
@@ -36,7 +42,10 @@ export async function registerUser(
       role
     });
     
-    return await response.json();
+    const user = await response.json();
+    // Save to local storage for persistence
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   } catch (error) {
     console.error("Registration error:", error);
     throw new Error("Failed to register. This username may already be taken.");
@@ -49,8 +58,12 @@ export async function registerUser(
 export async function logoutUser(): Promise<void> {
   try {
     await apiRequest("POST", "/api/auth/logout", {});
+    // Remove from local storage
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   } catch (error) {
     console.error("Logout error:", error);
+    // Still remove from local storage even if server logout fails
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     throw new Error("Failed to logout. Please try again.");
   }
 }
@@ -60,11 +73,43 @@ export async function logoutUser(): Promise<void> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
+    // Try to get from local storage first
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as User;
+    }
+    
+    // If not in storage, try to get from server
     const response = await apiRequest("GET", "/api/auth/me", undefined);
-    return await response.json();
+    const user = await response.json();
+    
+    // Save the user if found
+    if (user) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    }
+    
+    return user;
   } catch (error) {
     // If 401 or other auth error, just return null instead of throwing
     console.log("Not authenticated or error fetching user:", error);
     return null;
   }
+}
+
+/**
+ * For demo purposes, create a demo user without hitting the backend
+ */
+export function createDemoUser(role: "professor" | "student" = "professor"): User {
+  const user: User = {
+    id: 1,
+    username: role === "professor" ? "professor@eduquest.com" : "student@eduquest.com",
+    name: role === "professor" ? "Demo Professor" : "Demo Student",
+    role: role,
+    createdAt: new Date().toISOString()
+  };
+  
+  // Save to local storage
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  
+  return user;
 }

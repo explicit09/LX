@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import { useUser } from "./lib/user-context";
-import { User } from "./lib/types";
 
 // Import pages
 import SimpleAuth from "@/pages/SimpleAuth";
@@ -24,36 +23,21 @@ import StudentCourseChat from "@/pages/student/CourseChat";
 import StudentChatHistory from "@/pages/student/ChatHistory";
 
 function Router() {
-  const { user, isLoading, setUser } = useUser();
+  const { user, isLoading, createDummyUser } = useUser();
   const [location, setLocation] = useLocation();
 
-  // TEMPORARY: Create a demo user for testing
+  // Create demo user for easier testing
   useEffect(() => {
-    if (!user) {
-      const demoUser: User = {
-        id: 1,
-        username: "professor@example.com",
-        name: "Demo Professor",
-        role: "professor", 
-        createdAt: new Date().toISOString()
-      };
-      setUser(demoUser);
+    if (!user && !isLoading) {
+      // Create a demo professor account
+      createDummyUser("professor");
       
-      // Automatically redirect to the professor dashboard for testing
+      // Route to professor dashboard
       if (location === "/" || location === "/auth") {
         setLocation("/professor/dashboard");
       }
     }
-  }, []);
-
-  // We'll keep this simple for now
-  const isProtectedRoute = 
-    location.startsWith("/professor/") || 
-    location.startsWith("/student/");
-  
-  const isPublicRoute = 
-    location === "/" || 
-    location === "/auth";
+  }, [user, isLoading, location, setLocation, createDummyUser]);
 
   return (
     <Switch>
