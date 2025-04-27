@@ -3,16 +3,19 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -21,12 +24,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
-// Form schema
+// Schema for access code validation
 const formSchema = z.object({
-  accessCode: z.string().min(1, "Access code is required"),
+  accessCode: z.string().min(4, "Access code must be at least 4 characters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,7 +43,7 @@ const JoinCourseModal = ({
   onOpenChange,
   onCourseJoined,
 }: JoinCourseModalProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -53,30 +54,39 @@ const JoinCourseModal = ({
   });
 
   const onSubmit = async (values: FormValues) => {
+    setIsLoading(true);
+
     try {
-      setIsSubmitting(true);
-      
-      await apiRequest("POST", "/api/enrollments", {
-        accessCode: values.accessCode,
+      // Call the API to enroll in the course
+      const response = await apiRequest("POST", "/api/student/enroll", {
+        accessCode: values.accessCode.trim().toUpperCase(),
       });
-      
+
+      const data = await response.json();
+
       toast({
-        title: "Success",
-        description: "You have joined the course successfully.",
+        title: "Success!",
+        description: `You've successfully joined the course: ${data.course.name}`,
       });
-      
+
+      // Clear the form and close the modal
       form.reset();
-      onCourseJoined();
       onOpenChange(false);
+      
+      // Notify parent component that a course was joined
+      onCourseJoined();
     } catch (error) {
-      console.error("Error joining course:", error);
+      console.error("Failed to join course:", error);
       toast({
-        title: "Error",
-        description: "Failed to join course. The access code may be invalid.",
+        title: "Failed to join course",
+        description: 
+          error instanceof Error 
+            ? error.message 
+            : "The access code may be invalid or you may already be enrolled in this course.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
@@ -94,7 +104,7 @@ const JoinCourseModal = ({
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -102,22 +112,24 @@ const JoinCourseModal = ({
               name="accessCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">Enter Access Code</FormLabel>
+                  <FormLabel>Course Access Code</FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      className="w-full font-mono" 
-                      placeholder="XXXX-XXXX-XXXX" 
+                    <Input
+                      placeholder="Enter course code (e.g. ABC123)"
+                      autoCapitalize="characters"
+                      className="uppercase"
+                      {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This code was provided by your professor
-                  </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
+            <div className="text-sm text-gray-500">
+              Enter the access code provided by your professor to join the course.
+            </div>
+
             <DialogFooter className="flex justify-end gap-3 mt-6">
               <Button
                 type="button"
@@ -126,11 +138,8 @@ const JoinCourseModal = ({
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Joining..." : "Join Course"}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Joining..." : "Join Course"}
               </Button>
             </DialogFooter>
           </form>

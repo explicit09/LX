@@ -21,6 +21,7 @@ import ProfessorReports from "@/pages/professor/Reports";
 // Student pages
 import StudentDashboard from "@/pages/student/Dashboard";
 import StudentCourseChat from "@/pages/student/CourseChat";
+import StudentCourseMaterials from "@/pages/student/CourseMaterials";
 import StudentChatHistory from "@/pages/student/ChatHistory";
 
 function Router() {
@@ -56,6 +57,7 @@ function Router() {
       {/* Student routes */}
       <Route path="/student/dashboard" component={StudentDashboard} />
       <Route path="/student/course/:id/chat" component={StudentCourseChat} />
+      <Route path="/student/course/:id/materials" component={StudentCourseMaterials} />
       <Route path="/student/chat-history" component={StudentChatHistory} />
       
       {/* Landing page */}
