@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input';
 
 const StudentDashboard = () => {
   const { user } = useUser();
+  const [location, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [courseFilter, setCourseFilter] = useState<'all' | 'current' | 'past'>('all');
   
   // Fetch student's courses 
   const { data: courses = [], isLoading } = useQuery<Course[]>({
@@ -21,11 +23,28 @@ const StudentDashboard = () => {
     enabled: !!user,
   });
   
-  // Filter courses based on search term
-  const filteredCourses = courses.filter((course: Course) => 
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter courses based on search term and filter
+  const filteredCourses = courses.filter((course: Course) => {
+    // Text search filter
+    const matchesSearch = 
+      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // Time-based filter
+    if (courseFilter === 'all') {
+      return matchesSearch;
+    } else if (courseFilter === 'current') {
+      // Consider courses with activity in the last 30 days as current
+      return matchesSearch && course.lastAccessed && 
+        (new Date().getTime() - new Date(course.lastAccessed).getTime() < 30 * 24 * 60 * 60 * 1000);
+    } else if (courseFilter === 'past') {
+      // Consider courses without activity in the last 30 days as past
+      return matchesSearch && course.lastAccessed && 
+        (new Date().getTime() - new Date(course.lastAccessed).getTime() >= 30 * 24 * 60 * 60 * 1000);
+    }
+    
+    return matchesSearch;
+  });
   
   // We should show a login prompt if user is not authenticated
   if (!user) {
@@ -36,8 +55,8 @@ const StudentDashboard = () => {
           <p className="text-neutral-600 dark:text-neutral-400 mb-6">
             Please log in to access your student dashboard.
           </p>
-          <Button asChild>
-            <a href="/auth">Go to Login</a>
+          <Button onClick={() => navigate('/auth')}>
+            Go to Login
           </Button>
         </div>
       </div>
@@ -72,9 +91,24 @@ const StudentDashboard = () => {
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">All Courses</Button>
-          <Button variant="outline">Current</Button>
-          <Button variant="outline">Past</Button>
+          <Button 
+            variant={courseFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setCourseFilter('all')}
+          >
+            All Courses
+          </Button>
+          <Button 
+            variant={courseFilter === 'current' ? 'default' : 'outline'}
+            onClick={() => setCourseFilter('current')}
+          >
+            Current
+          </Button>
+          <Button 
+            variant={courseFilter === 'past' ? 'default' : 'outline'}
+            onClick={() => setCourseFilter('past')}
+          >
+            Past
+          </Button>
         </div>
       </div>
       
@@ -104,7 +138,12 @@ const StudentDashboard = () => {
             <p className="text-neutral-500 dark:text-neutral-400 text-sm text-center mb-4">
               Enter an access code to enroll in a new course
             </p>
-            <Button variant="outline">Enter Course Code</Button>
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/courses/join')}
+            >
+              Enter Course Code
+            </Button>
           </div>
         </div>
       ) : (
@@ -116,7 +155,11 @@ const StudentDashboard = () => {
             {searchTerm ? 'Try searching with different keywords' : 'You haven\'t enrolled in any courses yet'}
           </p>
           {!searchTerm && (
-            <Button className="mt-4" variant="default">
+            <Button 
+              className="mt-4" 
+              variant="default"
+              onClick={() => navigate('/courses/discover')}
+            >
               Explore Courses
             </Button>
           )}
