@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User schema with role (professor or student)
 export const users = pgTable("users", {
@@ -95,6 +96,55 @@ export const insertChatHistorySchema = createInsertSchema(chatHistory).pick({
 });
 
 // Types
+// Define relations
+export const usersRelations = relations(users, ({ many }) => ({
+  courses: many(courses, { relationName: "professor_courses" }),
+  enrollments: many(enrollments, { relationName: "student_enrollments" }),
+  chatHistory: many(chatHistory, { relationName: "student_chat_history" }),
+}));
+
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  professor: one(users, {
+    fields: [courses.professorId],
+    references: [users.id],
+    relationName: "professor_courses"
+  }),
+  enrollments: many(enrollments),
+  materials: many(materials),
+  chatHistory: many(chatHistory),
+}));
+
+export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
+  student: one(users, {
+    fields: [enrollments.studentId],
+    references: [users.id],
+    relationName: "student_enrollments"
+  }),
+  course: one(courses, {
+    fields: [enrollments.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const materialsRelations = relations(materials, ({ one }) => ({
+  course: one(courses, {
+    fields: [materials.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const chatHistoryRelations = relations(chatHistory, ({ one }) => ({
+  student: one(users, {
+    fields: [chatHistory.studentId],
+    references: [users.id],
+    relationName: "student_chat_history"
+  }),
+  course: one(courses, {
+    fields: [chatHistory.courseId],
+    references: [courses.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 

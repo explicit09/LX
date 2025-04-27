@@ -6,6 +6,12 @@ import {
   type Material, type InsertMaterial,
   type ChatItem, type InsertChatItem
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+import session from "express-session";
+import { Store as SessionStore } from "express-session";
 
 // Interface for storage operations
 export interface IStorage {
@@ -32,139 +38,135 @@ export interface IStorage {
   // Chat operations
   createChatItem(chatItem: InsertChatItem): Promise<ChatItem>;
   getStudentChatHistory(studentId: number, courseId: number): Promise<ChatItem[]>;
+  
+  // Session store for express-session
+  sessionStore: SessionStore;
 }
 
-export class MemStorage implements IStorage {
-  private userStore: Map<number, User>;
-  private courseStore: Map<number, Course>;
-  private enrollmentStore: Map<number, Enrollment>;
-  private materialStore: Map<number, Material>;
-  private chatHistoryStore: Map<number, ChatItem>;
-  
-  private currentUserId: number;
-  private currentCourseId: number;
-  private currentEnrollmentId: number;
-  private currentMaterialId: number;
-  private currentChatHistoryId: number;
+const PostgresSessionStore = connectPg(session);
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: SessionStore;
 
   constructor() {
-    this.userStore = new Map();
-    this.courseStore = new Map();
-    this.enrollmentStore = new Map();
-    this.materialStore = new Map();
-    this.chatHistoryStore = new Map();
-    
-    this.currentUserId = 1;
-    this.currentCourseId = 1;
-    this.currentEnrollmentId = 1;
-    this.currentMaterialId = 1;
-    this.currentChatHistoryId = 1;
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.userStore.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.userStore.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const now = new Date();
-    const user: User = { ...insertUser, id, createdAt: now };
-    this.userStore.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
   
   // Course operations
   async createCourse(insertCourse: InsertCourse): Promise<Course> {
-    const id = this.currentCourseId++;
-    const now = new Date();
-    const course: Course = { ...insertCourse, id, createdAt: now };
-    this.courseStore.set(id, course);
+    const [course] = await db.insert(courses).values(insertCourse).returning();
     return course;
   }
   
   async getCourse(id: number): Promise<Course | undefined> {
-    return this.courseStore.get(id);
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
   }
   
   async getCourseByAccessCode(accessCode: string): Promise<Course | undefined> {
-    return Array.from(this.courseStore.values()).find(
-      (course) => course.accessCode === accessCode,
-    );
+    const [course] = await db.select().from(courses).where(eq(courses.accessCode, accessCode));
+    return course;
   }
   
   async getProfessorCourses(professorId: number): Promise<Course[]> {
-    return Array.from(this.courseStore.values()).filter(
-      (course) => course.professorId === professorId,
-    );
+    return db.select().from(courses).where(eq(courses.professorId, professorId));
   }
   
   // Enrollment operations
   async createEnrollment(insertEnrollment: InsertEnrollment): Promise<Enrollment> {
-    const id = this.currentEnrollmentId++;
-    const now = new Date();
-    const enrollment: Enrollment = { ...insertEnrollment, id, joinedAt: now };
-    this.enrollmentStore.set(id, enrollment);
+    const [enrollment] = await db.insert(enrollments).values(insertEnrollment).returning();
     return enrollment;
   }
   
   async getStudentCourses(studentId: number): Promise<Course[]> {
-    const enrollments = Array.from(this.enrollmentStore.values()).filter(
-      (enrollment) => enrollment.studentId === studentId,
-    );
+    const studentEnrollments = await db
+      .select({
+        courseId: enrollments.courseId
+      })
+      .from(enrollments)
+      .where(eq(enrollments.studentId, studentId));
     
-    return enrollments.map(
-      (enrollment) => this.courseStore.get(enrollment.courseId)!
-    ).filter(Boolean);
+    if (studentEnrollments.length === 0) {
+      return [];
+    }
+    
+    const courseIds = studentEnrollments.map(e => e.courseId);
+    return db
+      .select()
+      .from(courses)
+      .where(
+        courseIds.map(id => eq(courses.id, id)).reduce((acc, curr) => acc || curr)
+      );
   }
   
   async getCourseStudents(courseId: number): Promise<User[]> {
-    const enrollments = Array.from(this.enrollmentStore.values()).filter(
-      (enrollment) => enrollment.courseId === courseId,
-    );
+    const courseEnrollments = await db
+      .select({
+        studentId: enrollments.studentId
+      })
+      .from(enrollments)
+      .where(eq(enrollments.courseId, courseId));
     
-    return enrollments.map(
-      (enrollment) => this.userStore.get(enrollment.studentId)!
-    ).filter(Boolean);
+    if (courseEnrollments.length === 0) {
+      return [];
+    }
+    
+    const studentIds = courseEnrollments.map(e => e.studentId);
+    return db
+      .select()
+      .from(users)
+      .where(
+        studentIds.map(id => eq(users.id, id)).reduce((acc, curr) => acc || curr)
+      );
   }
   
   // Material operations
   async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
-    const id = this.currentMaterialId++;
-    const now = new Date();
-    const material: Material = { ...insertMaterial, id, uploadDate: now };
-    this.materialStore.set(id, material);
+    const [material] = await db.insert(materials).values(insertMaterial).returning();
     return material;
   }
   
   async getCourseMaterials(courseId: number): Promise<Material[]> {
-    return Array.from(this.materialStore.values()).filter(
-      (material) => material.courseId === courseId,
-    );
+    return db.select().from(materials).where(eq(materials.courseId, courseId));
   }
   
   // Chat operations
   async createChatItem(insertChatItem: InsertChatItem): Promise<ChatItem> {
-    const id = this.currentChatHistoryId++;
-    const now = new Date();
-    const chatItem: ChatItem = { ...insertChatItem, id, timestamp: now };
-    this.chatHistoryStore.set(id, chatItem);
+    const [chatItem] = await db.insert(chatHistory).values(insertChatItem).returning();
     return chatItem;
   }
   
   async getStudentChatHistory(studentId: number, courseId: number): Promise<ChatItem[]> {
-    return Array.from(this.chatHistoryStore.values())
-      .filter(
-        (chatItem) => chatItem.studentId === studentId && chatItem.courseId === courseId,
+    return db
+      .select()
+      .from(chatHistory)
+      .where(
+        and(
+          eq(chatHistory.studentId, studentId),
+          eq(chatHistory.courseId, courseId)
+        )
       )
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      .orderBy(chatHistory.timestamp);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
