@@ -10,12 +10,26 @@ import ContinualLearningBanner from '@/components/dashboard/ContinualLearningBan
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 const StudentDashboard = () => {
   const { user } = useUser();
+  const { toast } = useToast();
   const [location, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState<'all' | 'current' | 'past'>('all');
+  
+  // Check if user has student role
+  useEffect(() => {
+    if (user && user.role !== 'student') {
+      toast({
+        title: 'Access Denied',
+        description: 'You need student privileges to access this page.',
+        variant: 'destructive'
+      });
+      navigate('/');
+    }
+  }, [user, navigate, toast]);
   
   // Fetch student's courses 
   const { data: courses = [], isLoading } = useQuery<Course[]>({

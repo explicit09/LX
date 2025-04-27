@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/lib/user-context';
 import { Course } from '@/lib/types';
+import { useLocation } from 'wouter';
 import CanvasLayout from '@/components/layout/CanvasLayout';
 import CourseCard from '@/components/course/CourseCard';
 import TodoList from '@/components/dashboard/TodoList';
@@ -26,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 const ProfessorDashboard = () => {
   const { user } = useUser();
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -34,6 +36,18 @@ const ProfessorDashboard = () => {
     description: '',
     accessCode: generateAccessCode()
   });
+  
+  // Check if user has professor role
+  useEffect(() => {
+    if (user && user.role !== 'professor') {
+      toast({
+        title: 'Access Denied',
+        description: 'You need professor privileges to access this page.',
+        variant: 'destructive'
+      });
+      navigate('/');
+    }
+  }, [user, navigate, toast]);
   
   // Fetch professor's courses
   const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
@@ -118,8 +132,8 @@ const ProfessorDashboard = () => {
           <p className="text-neutral-600 dark:text-neutral-400 mb-6">
             Please log in to access your professor dashboard.
           </p>
-          <Button asChild>
-            <a href="/auth">Go to Login</a>
+          <Button onClick={() => navigate('/auth')}>
+            Go to Login
           </Button>
         </div>
       </div>
