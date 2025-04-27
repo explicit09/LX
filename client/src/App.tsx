@@ -9,6 +9,7 @@ import { useUser } from "./lib/user-context";
 // Import pages
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/Landing";
 
 // Professor pages
 import ProfessorDashboard from "@/pages/professor/Dashboard";
@@ -25,10 +26,18 @@ function Router() {
   const { user, isLoading } = useUser();
   const [location, setLocation] = useLocation();
 
+  const isProtectedRoute = 
+    location.startsWith("/professor/") || 
+    location.startsWith("/student/");
+  
+  const isPublicRoute = 
+    location === "/" || 
+    location === "/auth";
+  
   useEffect(() => {
     if (!isLoading) {
-      // Redirect to auth if not logged in and not on auth page
-      if (!user && location !== "/auth" && location !== "/") {
+      // Redirect to auth if trying to access protected route while not logged in
+      if (!user && isProtectedRoute) {
         setLocation("/auth");
       }
       
@@ -37,9 +46,9 @@ function Router() {
         setLocation(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
       }
     }
-  }, [user, isLoading, location, setLocation]);
+  }, [user, isLoading, location, setLocation, isProtectedRoute]);
 
-  if (isLoading) {
+  if (isLoading && isProtectedRoute) {
     return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
   }
 
@@ -59,17 +68,8 @@ function Router() {
       <Route path="/student/course/:id/chat" component={StudentCourseChat} />
       <Route path="/student/chat-history" component={StudentChatHistory} />
       
-      {/* Root redirect */}
-      <Route path="/">
-        {() => {
-          const redirectPath = user 
-            ? (user.role === "professor" ? "/professor/dashboard" : "/student/dashboard")
-            : "/auth";
-          
-          setLocation(redirectPath);
-          return null;
-        }}
-      </Route>
+      {/* Landing page */}
+      <Route path="/" component={Landing} />
       
       {/* 404 fallback */}
       <Route component={NotFound} />
