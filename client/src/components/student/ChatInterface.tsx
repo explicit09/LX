@@ -24,6 +24,7 @@ interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   citations?: Citation[];
+  sources?: string[];
 }
 
 interface Citation {
@@ -206,7 +207,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <button
                   key={index}
                   onClick={() => handleCitationClick(citation)}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline block text-left"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline block text-left"
                 >
                   [{index + 1}] {citation.source} {citation.page && `(p. ${citation.page})`}
                 </button>
@@ -258,7 +259,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                   message.role === 'user'
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
                 }`}
               >
@@ -314,7 +315,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="btn-primary h-[44px] w-[44px] flex items-center justify-center rounded-full"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white h-[44px] w-[44px] flex items-center justify-center rounded-full hover:shadow-md transition-all"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
@@ -371,10 +372,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </div>
                   </div>
                   <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 flex justify-between">
-                    <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                    <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                       Open full document
                     </button>
-                    <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                    <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                       Download
                     </button>
                   </div>

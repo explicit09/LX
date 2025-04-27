@@ -210,7 +210,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="col-span-2 md:col-span-1">
-              <h3 className="text-white text-lg font-medium mb-4">LINK-X</h3>
+              <h3 className="text-white text-lg font-medium mb-4">LEARN-X</h3>
               <p className="mb-4">
                 AI-powered learning platform that transforms course materials into interactive conversations.
               </p>
@@ -254,7 +254,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           <div className="max-w-6xl mx-auto border-t border-neutral-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p>&copy; {new Date().getFullYear()} LINK-X. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} LEARN-X. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {['Terms', 'Privacy', 'Cookies'].map((item) => (
                 <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-white transition-colors">
