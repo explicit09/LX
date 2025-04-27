@@ -1,359 +1,314 @@
-import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import fs from "fs/promises";
+import express, { Express, Request, Response, NextFunction } from "express";
+import { createServer, Server } from "http";
 import path from "path";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import multer from "multer";
+import { storage } from "./storage";
+import { setupAuth } from "./auth";
+import { createEmbedding, transcribeAudio, summarizeWithLLM } from "./openai";
+import { processDocument, queryVectorStore, getVectorDBPath } from "./vectordb";
+import { insertCourseSchema, insertEnrollmentSchema, insertMaterialSchema, insertChatHistorySchema } from "@shared/schema";
 import { z } from "zod";
-import { 
-  insertUserSchema, 
-  insertCourseSchema, 
-  insertEnrollmentSchema,
-  insertChatHistorySchema 
-} from "@shared/schema";
-import { generateAccessCode } from "./utils";
-import { processDocument, getVectorDBPath, queryVectorStore } from "./vectordb";
-import { transcribeAudio, summarizeWithLLM } from "./openai";
-import { Buffer } from "buffer";
-import express from "express";
-import session from "express-session";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import crypto from "crypto";
-import MemoryStore from "memorystore";
 
-// Constants
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-const SESSION_SECRET = "link-x-course-assistant-secret";
-
-// Ensure upload directory exists
+// Ensure uploads directory exists
 async function ensureUploadDir() {
+  const uploadDir = path.join(process.cwd(), "uploads");
+  const pdfsDir = path.join(uploadDir, "pdfs");
+  const audioDir = path.join(uploadDir, "audio");
+  
   try {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-    await fs.mkdir(path.join(UPLOAD_DIR, "pdfs"), { recursive: true });
-    await fs.mkdir(path.join(UPLOAD_DIR, "audio"), { recursive: true });
-    await fs.mkdir(path.join(UPLOAD_DIR, "indexes"), { recursive: true });
-  } catch (err) {
-    console.error("Failed to create upload directories", err);
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.mkdir(pdfsDir, { recursive: true });
+    await fs.mkdir(audioDir, { recursive: true });
+  } catch (error) {
+    console.error("Error creating upload directories:", error);
   }
 }
 
+// Create a random access code
+function generateAccessCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Register all routes
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize directories
+  // Initialize upload directories
   await ensureUploadDir();
   
-  // Configure authentication & sessions
-  const MemStore = MemoryStore(session);
-  app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === "production", maxAge: 86400000 },
-    store: new MemStore({ checkPeriod: 86400000 })
-  }));
-  
-  app.use(passport.initialize());
-  app.use(passport.session());
-  
-  // Configure passport
-  passport.use(new LocalStrategy(async (username, password, done) => {
-    try {
-      const user = await storage.getUserByUsername(username);
-      if (!user) {
-        return done(null, false, { message: "User not found" });
-      }
-      
-      // In a real app, you'd use bcrypt to hash and compare passwords
-      if (user.password !== password) {
-        return done(null, false, { message: "Incorrect password" });
-      }
-      
-      return done(null, user);
-    } catch (err) {
-      return done(err);
-    }
-  }));
-  
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-  
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
+  // Setup authentication
+  const { isAuthenticated, isProfessor, isStudent } = setupAuth(app);
   
   // Configure multer for file uploads
+  const fileStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const isAudio = file.mimetype.startsWith("audio/");
+      const dir = isAudio ? "audio" : "pdfs";
+      cb(null, path.join(process.cwd(), "uploads", dir));
+    },
+    filename: (req, file, cb) => {
+      // Replace spaces with dashes and keep the original extension
+      const fileName = file.originalname.replace(/\s+/g, "-");
+      cb(null, `${Date.now()}-${fileName}`);
+    }
+  });
+  
   const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB max file size
-  });
-  
-  // Middleware for checking if user is authenticated
-  const isAuthenticated = (req: Request, res: Response, next: any) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).json({ message: "Authentication required" });
-  };
-  
-  // Middleware for checking if user is a professor
-  const isProfessor = (req: Request, res: Response, next: any) => {
-    if (req.isAuthenticated() && req.user && (req.user as any).role === "professor") {
-      return next();
-    }
-    res.status(403).json({ message: "Professor access required" });
-  };
-  
-  // Middleware for checking if user is a student
-  const isStudent = (req: Request, res: Response, next: any) => {
-    if (req.isAuthenticated() && req.user && (req.user as any).role === "student") {
-      return next();
-    }
-    res.status(403).json({ message: "Student access required" });
-  };
-  
-  // Auth routes
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+    storage: fileStorage,
+    limits: {
+      fileSize: 25 * 1024 * 1024, // 25MB
+    },
+    fileFilter: (req, file, cb) => {
+      // Allow PDF and audio files
+      if (
+        file.mimetype === "application/pdf" || 
+        file.mimetype.startsWith("audio/")
+      ) {
+        cb(null, true);
+      } else {
+        cb(new Error("Invalid file type. Only PDF and audio files are allowed."));
       }
+    }
+  });
+
+  // ==================
+  // Professor API routes
+  // ==================
+  
+  // Get all courses taught by the professor
+  app.get("/api/professor/courses", isProfessor, async (req, res, next) => {
+    try {
+      const courses = await storage.getProfessorCourses(req.user!.id);
       
-      // Create user
-      const user = await storage.createUser(userData);
+      // Enhance courses with student and material counts
+      const enhancedCourses = await Promise.all(courses.map(async (course) => {
+        const students = await storage.getCourseStudents(course.id);
+        const materials = await storage.getCourseMaterials(course.id);
+        
+        return {
+          ...course,
+          studentCount: students.length,
+          materialCount: materials.length
+        };
+      }));
       
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
-      
-      // Login the user after registration
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Error logging in after registration" });
-        }
-        return res.status(201).json(userWithoutPassword);
-      });
+      res.json(enhancedCourses);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to register user" });
+      next(error);
     }
   });
   
-  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
-    const { password, ...userWithoutPassword } = req.user as any;
-    res.json(userWithoutPassword);
-  });
-  
-  app.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-  
-  app.get("/api/auth/me", isAuthenticated, (req, res) => {
-    const { password, ...userWithoutPassword } = req.user as any;
-    res.json(userWithoutPassword);
-  });
-  
-  // Professor routes
-  app.post("/api/courses", isProfessor, async (req, res) => {
+  // Create a new course
+  app.post("/api/professor/courses", isProfessor, async (req, res, next) => {
     try {
-      const professorId = (req.user as any).id;
-      
-      // Generate a unique access code
-      const accessCode = generateAccessCode();
-      
-      // Create the course with the professor's ID
-      const courseData = insertCourseSchema.parse({
+      const validatedData = insertCourseSchema.parse({
         ...req.body,
-        professorId,
-        accessCode
+        professorId: req.user!.id,
+        accessCode: req.body.accessCode || generateAccessCode()
       });
       
-      const course = await storage.createCourse(courseData);
+      const course = await storage.createCourse(validatedData);
       res.status(201).json(course);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid course data", errors: error.errors });
+        return res.status(400).json({ errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create course" });
+      next(error);
     }
   });
   
-  app.get("/api/professor/courses", isProfessor, async (req, res) => {
-    try {
-      const professorId = (req.user as any).id;
-      const courses = await storage.getProfessorCourses(professorId);
-      res.json(courses);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch courses" });
-    }
-  });
-  
-  app.get("/api/courses/:id/students", isProfessor, async (req, res) => {
+  // Get a single course by ID
+  app.get("/api/professor/courses/:id", isProfessor, async (req, res, next) => {
     try {
       const courseId = parseInt(req.params.id);
-      
-      // Check if course exists and belongs to the professor
       const course = await storage.getCourse(courseId);
-      if (!course || course.professorId !== (req.user as any).id) {
-        return res.status(404).json({ message: "Course not found" });
-      }
       
-      const students = await storage.getCourseStudents(courseId);
-      
-      // Remove passwords from response
-      const studentsWithoutPasswords = students.map(student => {
-        const { password, ...studentWithoutPassword } = student;
-        return studentWithoutPassword;
-      });
-      
-      res.json(studentsWithoutPasswords);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch students" });
-    }
-  });
-  
-  // Upload route for course materials
-  app.post(
-    "/api/courses/:courseId/materials", 
-    isProfessor, 
-    upload.single("file"), 
-    async (req, res) => {
-      try {
-        const courseId = parseInt(req.params.courseId);
-        const file = req.file;
-        
-        if (!file) {
-          return res.status(400).json({ message: "No file uploaded" });
-        }
-        
-        // Check if course exists and belongs to the professor
-        const course = await storage.getCourse(courseId);
-        if (!course || course.professorId !== (req.user as any).id) {
-          return res.status(404).json({ message: "Course not found" });
-        }
-        
-        // Determine file type and process accordingly
-        const fileExtension = path.extname(file.originalname).toLowerCase();
-        let fileType: string;
-        let filePath: string;
-        let transcription: string | undefined;
-        
-        if ([".pdf"].includes(fileExtension)) {
-          fileType = "pdf";
-          filePath = path.join("pdfs", `${Date.now()}_${file.originalname}`);
-          
-          // Save the PDF file
-          await fs.writeFile(path.join(UPLOAD_DIR, filePath), file.buffer);
-          
-          // Process the PDF for vector database
-          await processDocument(path.join(UPLOAD_DIR, filePath), courseId);
-          
-        } else if ([".mp3", ".wav", ".m4a"].includes(fileExtension)) {
-          fileType = "audio";
-          filePath = path.join("audio", `${Date.now()}_${file.originalname}`);
-          
-          // Save the audio file
-          await fs.writeFile(path.join(UPLOAD_DIR, filePath), file.buffer);
-          
-          // Transcribe the audio file
-          transcription = await transcribeAudio(path.join(UPLOAD_DIR, filePath));
-          
-          // If transcription successful, also add it to the vector database
-          if (transcription) {
-            const transcriptionFilePath = path.join(UPLOAD_DIR, "pdfs", `${Date.now()}_${path.basename(file.originalname, fileExtension)}_transcript.txt`);
-            await fs.writeFile(transcriptionFilePath, transcription);
-            await processDocument(transcriptionFilePath, courseId);
-          }
-        } else {
-          return res.status(400).json({ message: "Unsupported file type" });
-        }
-        
-        // Create material record
-        const material = await storage.createMaterial({
-          courseId,
-          name: file.originalname,
-          type: fileType,
-          path: filePath,
-          transcription
-        });
-        
-        res.status(201).json(material);
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        res.status(500).json({ message: "Failed to upload file" });
-      }
-    }
-  );
-  
-  app.get("/api/courses/:courseId/materials", isAuthenticated, async (req, res) => {
-    try {
-      const courseId = parseInt(req.params.courseId);
-      const user = req.user as any;
-      
-      // Check if course exists and user has access (either professor or enrolled student)
-      const course = await storage.getCourse(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      // If user is professor, check if course belongs to them
-      if (user.role === "professor" && course.professorId !== user.id) {
-        return res.status(403).json({ message: "Access denied" });
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
       }
       
-      // If user is student, check if they're enrolled
-      if (user.role === "student") {
-        const studentCourses = await storage.getStudentCourses(user.id);
-        const enrolled = studentCourses.some(c => c.id === courseId);
-        if (!enrolled) {
-          return res.status(403).json({ message: "Not enrolled in this course" });
+      const students = await storage.getCourseStudents(courseId);
+      const materials = await storage.getCourseMaterials(courseId);
+      
+      res.json({
+        ...course,
+        studentCount: students.length,
+        materialCount: materials.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Upload materials to a course
+  app.post(
+    "/api/professor/courses/:id/materials", 
+    isProfessor, 
+    upload.single("file"), 
+    async (req, res, next) => {
+      try {
+        const courseId = parseInt(req.params.id);
+        const course = await storage.getCourse(courseId);
+        
+        if (!course) {
+          return res.status(404).json({ message: "Course not found" });
         }
+        
+        if (course.professorId !== req.user!.id) {
+          return res.status(403).json({ message: "Unauthorized to access this course" });
+        }
+        
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        const file = req.file;
+        const isAudio = file.mimetype.startsWith("audio/");
+        const fileType = isAudio ? "audio" : "pdf";
+        
+        let transcription = undefined;
+        
+        // For audio files, transcribe the content
+        if (isAudio) {
+          try {
+            transcription = await transcribeAudio(file.path);
+          } catch (transcriptionError) {
+            console.error("Error transcribing audio:", transcriptionError);
+          }
+        }
+        
+        // Create the material record
+        const material = await storage.createMaterial({
+          courseId,
+          name: file.originalname,
+          type: fileType,
+          path: file.path,
+          transcription
+        });
+        
+        // Process document for vector search (PDF or transcription)
+        try {
+          await processDocument(file.path, courseId);
+        } catch (processingError) {
+          console.error("Error processing document for vector search:", processingError);
+        }
+        
+        res.status(201).json(material);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+  
+  // Get all materials for a course
+  app.get("/api/professor/courses/:id/materials", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
       }
       
       const materials = await storage.getCourseMaterials(courseId);
       res.json(materials);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch materials" });
+      next(error);
     }
   });
   
-  // Student routes
-  app.post("/api/enrollments", isStudent, async (req, res) => {
+  // Get all students enrolled in a course
+  app.get("/api/professor/courses/:id/students", isProfessor, async (req, res, next) => {
     try {
-      const studentId = (req.user as any).id;
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      const students = await storage.getCourseStudents(courseId);
+      
+      // Remove passwords from student objects
+      const safeStudents = students.map(student => {
+        const { password, ...safeStudent } = student;
+        return safeStudent;
+      });
+      
+      res.json(safeStudents);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // ==================
+  // Student API routes
+  // ==================
+  
+  // Get all courses enrolled by the student
+  app.get("/api/student/courses", isStudent, async (req, res, next) => {
+    try {
+      const courses = await storage.getStudentCourses(req.user!.id);
+      
+      // Enhance courses with material counts
+      const enhancedCourses = await Promise.all(courses.map(async (course) => {
+        const materials = await storage.getCourseMaterials(course.id);
+        
+        return {
+          ...course,
+          materialCount: materials.length
+        };
+      }));
+      
+      res.json(enhancedCourses);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Enroll in a course using access code
+  app.post("/api/student/enroll", isStudent, async (req, res, next) => {
+    try {
       const { accessCode } = req.body;
       
       if (!accessCode) {
         return res.status(400).json({ message: "Access code is required" });
       }
       
-      // Look up the course by access code
       const course = await storage.getCourseByAccessCode(accessCode);
+      
       if (!course) {
-        return res.status(404).json({ message: "Invalid access code" });
+        return res.status(404).json({ message: "Course not found with the provided access code" });
       }
       
-      // Check if student is already enrolled
-      const studentCourses = await storage.getStudentCourses(studentId);
-      if (studentCourses.some(c => c.id === course.id)) {
+      // Check if already enrolled
+      const studentCourses = await storage.getStudentCourses(req.user!.id);
+      const alreadyEnrolled = studentCourses.some(c => c.id === course.id);
+      
+      if (alreadyEnrolled) {
         return res.status(400).json({ message: "Already enrolled in this course" });
       }
       
-      // Enroll the student
+      // Create enrollment
       const enrollment = await storage.createEnrollment({
-        studentId,
+        studentId: req.user!.id,
         courseId: course.id
       });
       
@@ -362,126 +317,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
         course
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to enroll in course" });
+      next(error);
     }
   });
   
-  app.get("/api/student/courses", isStudent, async (req, res) => {
+  // Get a course by ID (for student)
+  app.get("/api/student/courses/:id", isStudent, async (req, res, next) => {
     try {
-      const studentId = (req.user as any).id;
-      const courses = await storage.getStudentCourses(studentId);
-      res.json(courses);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch courses" });
-    }
-  });
-  
-  // Chat routes
-  app.post("/api/courses/:courseId/chat", isStudent, async (req, res) => {
-    try {
-      const courseId = parseInt(req.params.courseId);
-      const studentId = (req.user as any).id;
-      const { question } = req.body;
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
       
-      if (!question) {
-        return res.status(400).json({ message: "Question is required" });
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
       }
       
-      // Check if student is enrolled in the course
-      const studentCourses = await storage.getStudentCourses(studentId);
-      if (!studentCourses.some(c => c.id === courseId)) {
+      // Verify student is enrolled in this course
+      const studentCourses = await storage.getStudentCourses(req.user!.id);
+      const isEnrolled = studentCourses.some(c => c.id === courseId);
+      
+      if (!isEnrolled) {
         return res.status(403).json({ message: "Not enrolled in this course" });
       }
       
-      // Query the vector store for relevant content
-      const vectorDbPath = getVectorDBPath(courseId);
-      const { content, sources } = await queryVectorStore(vectorDbPath, question);
+      const materials = await storage.getCourseMaterials(courseId);
       
-      // Generate a response using the LLM
-      const answer = await summarizeWithLLM(question, content);
-      
-      // Save the chat history
-      const chatItem = await storage.createChatItem({
-        studentId,
-        courseId,
-        question,
-        answer,
-        sources: JSON.stringify(sources)
+      res.json({
+        ...course,
+        materialCount: materials.length
       });
-      
-      res.json(chatItem);
     } catch (error) {
-      console.error("Chat error:", error);
-      res.status(500).json({ message: "Failed to process chat request" });
+      next(error);
     }
   });
   
-  app.get("/api/courses/:courseId/chat-history", isStudent, async (req, res) => {
+  // Get all materials for a course (for student)
+  app.get("/api/student/courses/:id/materials", isStudent, async (req, res, next) => {
     try {
-      const courseId = parseInt(req.params.courseId);
-      const studentId = (req.user as any).id;
+      const courseId = parseInt(req.params.id);
       
-      // Check if student is enrolled in the course
+      // Verify student is enrolled in this course
+      const studentCourses = await storage.getStudentCourses(req.user!.id);
+      const isEnrolled = studentCourses.some(c => c.id === courseId);
+      
+      if (!isEnrolled) {
+        return res.status(403).json({ message: "Not enrolled in this course" });
+      }
+      
+      const materials = await storage.getCourseMaterials(courseId);
+      res.json(materials);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Get chat history for a course
+  app.get("/api/student/courses/:id/chat", isStudent, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const studentId = req.user!.id;
+      
+      // Verify student is enrolled in this course
       const studentCourses = await storage.getStudentCourses(studentId);
-      if (!studentCourses.some(c => c.id === courseId)) {
+      const isEnrolled = studentCourses.some(c => c.id === courseId);
+      
+      if (!isEnrolled) {
         return res.status(403).json({ message: "Not enrolled in this course" });
       }
       
       const chatHistory = await storage.getStudentChatHistory(studentId, courseId);
       res.json(chatHistory);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch chat history" });
+      next(error);
     }
   });
   
-  // Utility function for generating access codes - added here for completeness
-  app.get("/api/utils/generate-access-code", isProfessor, (req, res) => {
-    const accessCode = generateAccessCode();
-    res.json({ accessCode });
-  });
-
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // Add routes for PDF serving (for professors and enrolled students)
-  app.get("/api/uploads/:type/:filename", isAuthenticated, async (req, res) => {
+  // Ask a question to the AI
+  app.post("/api/student/courses/:id/ask", isStudent, async (req, res, next) => {
     try {
-      const { type, filename } = req.params;
-      const user = req.user as any;
+      const courseId = parseInt(req.params.id);
+      const studentId = req.user!.id;
+      const { question } = req.body;
       
-      // Ensure path is within allowed directories
-      if (!["pdfs", "audio"].includes(type)) {
-        return res.status(400).json({ message: "Invalid resource type" });
+      if (!question || typeof question !== "string") {
+        return res.status(400).json({ message: "Question is required" });
       }
       
-      const filePath = path.join(UPLOAD_DIR, type, filename);
+      // Verify student is enrolled in this course
+      const studentCourses = await storage.getStudentCourses(studentId);
+      const isEnrolled = studentCourses.some(c => c.id === courseId);
       
-      // Check if file exists
-      try {
-        await fs.access(filePath);
-      } catch (err) {
-        return res.status(404).json({ message: "File not found" });
+      if (!isEnrolled) {
+        return res.status(403).json({ message: "Not enrolled in this course" });
       }
       
-      // Check if user has access to this file (based on course ownership or enrollment)
-      // This would require looking up which course the file belongs to
-      // For simplicity in this example, we're skipping this check
+      // Retrieve context from vector database
+      const vectorDbPath = getVectorDBPath(courseId);
+      const { content: context, sources } = await queryVectorStore(vectorDbPath, question);
       
-      res.sendFile(filePath);
+      // Generate answer using OpenAI
+      const answer = await summarizeWithLLM(question, context);
+      
+      // Store in chat history
+      const chatItem = await storage.createChatItem({
+        studentId,
+        courseId,
+        question,
+        answer,
+        sources: sources.join(",")
+      });
+      
+      res.json(chatItem);
     } catch (error) {
-      res.status(500).json({ message: "Failed to retrieve file" });
+      next(error);
     }
   });
-
-  return httpServer;
-}
-
-// Utility function to generate unique access codes
-function generateAccessCode(): string {
-  // Format: XXXX-XXXX-XXXX (3 groups of 4 alphanumeric characters)
-  const generateRandomGroup = () => {
-    return crypto.randomBytes(2).toString('hex').toUpperCase();
-  };
   
-  return `${generateRandomGroup()}-${generateRandomGroup()}-${generateRandomGroup()}`;
+  // Serve static files from uploads directory
+  app.use("/api/uploads", express.static(path.join(process.cwd(), "uploads")));
+  
+  // Create and return the HTTP server
+  const httpServer = createServer(app);
+  return httpServer;
 }

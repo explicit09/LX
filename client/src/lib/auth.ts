@@ -9,10 +9,9 @@ const AUTH_STORAGE_KEY = 'eduquest_user';
  */
 export async function loginUser(username: string, password: string, role: "professor" | "student"): Promise<User> {
   try {
-    const response = await apiRequest("POST", "/api/auth/login", {
+    const response = await apiRequest("POST", "/api/login", {
       username,
-      password,
-      role
+      password
     });
     
     const user = await response.json();
@@ -35,7 +34,7 @@ export async function registerUser(
   role: "professor" | "student"
 ): Promise<User> {
   try {
-    const response = await apiRequest("POST", "/api/auth/register", {
+    const response = await apiRequest("POST", "/api/register", {
       name,
       username,
       password,
@@ -57,7 +56,7 @@ export async function registerUser(
  */
 export async function logoutUser(): Promise<void> {
   try {
-    await apiRequest("POST", "/api/auth/logout", {});
+    await apiRequest("POST", "/api/logout", {});
     // Remove from local storage
     localStorage.removeItem(AUTH_STORAGE_KEY);
   } catch (error) {
@@ -79,13 +78,18 @@ export async function getCurrentUser(): Promise<User | null> {
       return JSON.parse(stored) as User;
     }
     
-    // For demo purposes, we'll just return null here instead of hitting the server
-    // In a real app, this would make an API call to get the current user
-    // const response = await apiRequest("GET", "/api/auth/me", undefined);
-    // const user = await response.json();
-    // if (user) {
-    //   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    // }
+    // Get the current user from the API
+    try {
+      const response = await apiRequest("GET", "/api/user", undefined);
+      const user = await response.json();
+      if (user) {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        return user;
+      }
+    } catch (err) {
+      // If API call fails, just proceed with null
+      console.log("API call to get current user failed:", err);
+    }
     
     return null;
   } catch (error) {
@@ -99,16 +103,30 @@ export async function getCurrentUser(): Promise<User | null> {
  * For demo purposes, create a demo user without hitting the backend
  */
 export function createDemoUser(role: "professor" | "student" = "professor"): User {
-  const user: User = {
-    id: 1,
-    username: role === "professor" ? "professor@eduquest.com" : "student@eduquest.com",
-    name: role === "professor" ? "Demo Professor" : "Demo Student",
-    role: role,
-    createdAt: new Date().toISOString()
-  };
-  
-  // Save to local storage
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-  
-  return user;
+  // First try to register a demo user
+  try {
+    // We'll try to register a user with the backend
+    return registerUser(
+      role === "professor" ? "Demo Professor" : "Demo Student", 
+      role === "professor" ? "prof@eduquest.com" : "student@eduquest.com", 
+      "password123", 
+      role
+    );
+  } catch (error) {
+    // If registration fails, just create a local user
+    console.log("Failed to register demo user, using local mock:", error);
+    
+    const user: User = {
+      id: 1,
+      username: role === "professor" ? "prof@eduquest.com" : "student@eduquest.com",
+      name: role === "professor" ? "Demo Professor" : "Demo Student",
+      role: role,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Save to local storage
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    
+    return user;
+  }
 }
