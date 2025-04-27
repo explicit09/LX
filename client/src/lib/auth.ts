@@ -2,7 +2,7 @@ import { apiRequest } from "./queryClient";
 import { User } from "./types";
 
 // Storage key for persistent authentication
-const AUTH_STORAGE_KEY = 'eduquest_user';
+const AUTH_STORAGE_KEY = 'learnx_user';
 
 /**
  * Authenticates a user with the provided credentials
@@ -103,30 +103,19 @@ export async function getCurrentUser(): Promise<User | null> {
  * For demo purposes, create a demo user without hitting the backend
  */
 export function createDemoUser(role: "professor" | "student" = "professor"): User {
-  // First try to register a demo user
-  try {
-    // We'll try to register a user with the backend
-    return registerUser(
-      role === "professor" ? "Demo Professor" : "Demo Student", 
-      role === "professor" ? "prof@eduquest.com" : "student@eduquest.com", 
-      "password123", 
-      role
-    );
-  } catch (error) {
-    // If registration fails, just create a local user
-    console.log("Failed to register demo user, using local mock:", error);
+  // Create a local user for demo purposes
+  const dummyId = Math.floor(Math.random() * 1000);
     
-    const user: User = {
-      id: 1,
-      username: role === "professor" ? "prof@eduquest.com" : "student@eduquest.com",
-      name: role === "professor" ? "Demo Professor" : "Demo Student",
-      role: role,
-      createdAt: new Date().toISOString()
-    };
-    
-    // Save to local storage
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    
-    return user;
-  }
+  const user: User = {
+    id: dummyId,
+    username: role === "professor" ? `prof${dummyId}` : `student${dummyId}`,
+    name: role === "professor" ? "Dr. Michael Chen" : "Alex Johnson",
+    role: role,
+    createdAt: new Date().toISOString()
+  };
+  
+  // Save to local storage
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  
+  return user;
 }

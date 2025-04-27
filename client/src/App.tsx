@@ -28,15 +28,15 @@ function Router() {
   const { user, isLoading, createDummyUser } = useUser();
   const [location, setLocation] = useLocation();
 
-  // Create demo user for easier testing
+  // Create demo user for easier testing if needed
   useEffect(() => {
-    if (!user && !isLoading) {
-      // Create a demo professor account
-      createDummyUser("professor");
-      
-      // Route to professor dashboard
-      if (location === "/" || location === "/auth") {
-        setLocation("/professor/dashboard");
+    if (!user && !isLoading && location !== "/" && location !== "/auth") {
+      // If URL contains 'student', create a student account
+      if (location.includes('student')) {
+        createDummyUser("student");
+      } else {
+        // Default to professor for other routes
+        createDummyUser("professor");
       }
     }
   }, [user, isLoading, location, setLocation, createDummyUser]);
