@@ -85,6 +85,7 @@ export default function SimpleAuth() {
       const userData = await response.json();
       console.log("Login successful, user data:", userData);
       
+      // Update global user state
       setUser(userData);
       
       toast({
@@ -92,8 +93,12 @@ export default function SimpleAuth() {
         description: `Welcome back, ${userData.name || "user"}!`,
       });
       
-      // Use appropriate role-based redirect
-      navigate(userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
+      // Manually perform navigation after a short delay to allow context to update
+      setTimeout(() => {
+        const targetPath = userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
+        console.log("Manual navigation to:", targetPath);
+        window.location.href = targetPath;
+      }, 500);
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -121,14 +126,37 @@ export default function SimpleAuth() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("POST", "/api/register", {
-        name: formState.name,
-        username: formState.username,
-        password: formState.password,
-        role: formState.role
+      console.log("Attempting registration with:", formState.username);
+      
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formState.name,
+          username: formState.username,
+          password: formState.password,
+          role: formState.role
+        }),
+        credentials: "include"
       });
       
+      console.log("Registration response status:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Registration error response:", errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || "Registration failed");
+        } catch (e) {
+          throw new Error("Registration failed: " + response.statusText);
+        }
+      }
+      
       const userData = await response.json();
+      console.log("Registration successful, user data:", userData);
+      
+      // Update global user state
       setUser(userData);
       
       toast({
@@ -136,12 +164,17 @@ export default function SimpleAuth() {
         description: `Welcome, ${userData.name}!`,
       });
       
-      navigate(userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
+      // Manually perform navigation after a short delay to allow context to update
+      setTimeout(() => {
+        const targetPath = userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
+        console.log("Manual navigation to:", targetPath);
+        window.location.href = targetPath;
+      }, 500);
     } catch (error) {
       console.error("Registration error:", error);
       toast({
         title: "Registration failed",
-        description: "Could not create account. Username may already exist.",
+        description: error instanceof Error ? error.message : "Could not create account. Username may already exist.",
         variant: "destructive",
       });
     } finally {

@@ -51,26 +51,34 @@ function Router() {
     const publicRoutes = ['/', '/auth', '/ai-tutor-demo'];
     
     if (!isLoading) {
+      console.log("Navigation check - User:", user?.username, "Role:", user?.role, "Location:", location);
+      
       if (!user && !publicRoutes.includes(location)) {
         // Redirect to auth page if trying to access protected routes
+        console.log("Redirecting to auth page - not authenticated");
         setLocation("/auth");
       } else if (user) {
         // Handle role-based redirections
         const isProfessorRoute = location.startsWith('/professor');
         const isStudentRoute = location.startsWith('/student');
         
-        // Redirect if user is trying to access pages for the wrong role
-        if (isProfessorRoute && user.role !== 'professor') {
-          setLocation("/student/dashboard");
-        } else if (isStudentRoute && user.role !== 'student') {
-          setLocation("/professor/dashboard");
-        } else if (location === '/auth') {
-          // Redirect from auth page if already logged in
+        if (location === '/auth' || location === '/') {
+          // Redirect from auth/home page if already logged in
           if (user.role === 'professor') {
+            console.log("Redirecting professor to dashboard");
             setLocation("/professor/dashboard");
           } else {
+            console.log("Redirecting student to dashboard");
             setLocation("/student/dashboard");
           }
+        }
+        // Redirect if user is trying to access pages for the wrong role
+        else if (isProfessorRoute && user.role !== 'professor') {
+          console.log("Access denied - redirecting student from professor page");
+          setLocation("/student/dashboard");
+        } else if (isStudentRoute && user.role !== 'student') {
+          console.log("Access denied - redirecting professor from student page");
+          setLocation("/professor/dashboard");
         }
       }
     }
