@@ -5,6 +5,72 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "./lib/user-context";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+// Define the ProtectedRoute component directly in App.tsx to avoid import issues
+function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'professor' | 'student' }) {
+  const { user, isLoading } = useUser();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if user is not authenticated
+    if (!isLoading && !user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to access this page',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    // If requiredRole is specified, check if user has that role
+    if (!isLoading && user && requiredRole && user.role !== requiredRole) {
+      toast({
+        title: 'Access Denied',
+        description: `You need ${requiredRole} privileges to access this page`,
+        variant: 'destructive',
+      });
+      // Redirect to appropriate dashboard based on user role
+      navigate(user.role === 'professor' ? '/professor/dashboard' : '/student/dashboard');
+    }
+  }, [user, isLoading, requiredRole, navigate, toast]);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-neutral-600 dark:text-neutral-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth required message if not logged in
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+        <div className="p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md max-w-md w-full text-center">
+          <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+          <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+            Please log in to access this page.
+          </p>
+          <Button onClick={() => navigate('/auth')}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // User is authenticated and has the required role, show children
+  return <>{children}</>;
+}
 
 // Import layout components
 import Navbar from "@/components/layout/Navbar";
@@ -94,27 +160,71 @@ function Router() {
           {/* Auth route */}
           <Route path="/auth" component={SimpleAuth} />
           
-          {/* Professor routes */}
-          <Route path="/professor/dashboard" component={ProfessorDashboard} />
-          <Route path="/professor/courses" component={ProfessorCourses} />
-          <Route path="/professor/courses/:id" component={ProfessorCourseDetail} />
-          <Route path="/professor/courses/:id/analytics" component={() => {
-            const CourseAnalytics = lazy(() => import('./pages/professor/CourseAnalytics'));
-            return (
-              <Suspense fallback={<div>Loading analytics...</div>}>
-                <CourseAnalytics />
-              </Suspense>
-            );
-          }} />
-          <Route path="/professor/materials" component={ProfessorMaterials} />
-          <Route path="/professor/reports" component={ProfessorReports} />
-          <Route path="/professor/reports/:id" component={ProfessorReports} />
+          {/* Professor routes - all wrapped with ProtectedRoute component */}
+          <Route path="/professor/dashboard">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorDashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/courses">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorCourses />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/courses/:id">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorCourseDetail />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/courses/:id/analytics">
+            <ProtectedRoute requiredRole="professor">
+              {(() => {
+                const CourseAnalytics = lazy(() => import('./pages/professor/CourseAnalytics'));
+                return (
+                  <Suspense fallback={<div>Loading analytics...</div>}>
+                    <CourseAnalytics />
+                  </Suspense>
+                );
+              })()}
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/materials">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorMaterials />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/reports">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorReports />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professor/reports/:id">
+            <ProtectedRoute requiredRole="professor">
+              <ProfessorReports />
+            </ProtectedRoute>
+          </Route>
           
-          {/* Student routes */}
-          <Route path="/student/dashboard" component={StudentDashboard} />
-          <Route path="/student/course/:id/chat" component={StudentCourseChat} />
-          <Route path="/student/course/:id/materials" component={StudentCourseMaterials} />
-          <Route path="/student/chat-history" component={StudentChatHistory} />
+          {/* Student routes - all wrapped with ProtectedRoute component */}
+          <Route path="/student/dashboard">
+            <ProtectedRoute requiredRole="student">
+              <StudentDashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/student/course/:id/chat">
+            <ProtectedRoute requiredRole="student">
+              <StudentCourseChat />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/student/course/:id/materials">
+            <ProtectedRoute requiredRole="student">
+              <StudentCourseMaterials />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/student/chat-history">
+            <ProtectedRoute requiredRole="student">
+              <StudentChatHistory />
+            </ProtectedRoute>
+          </Route>
           
           {/* Course routes */}
           <Route path="/courses/:courseId/modules" component={() => {

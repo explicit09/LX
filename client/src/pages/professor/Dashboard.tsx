@@ -37,9 +37,14 @@ const ProfessorDashboard = () => {
     accessCode: generateAccessCode()
   });
   
-  // Check if user has professor role
+  // Log user state for debugging
   useEffect(() => {
+    console.log("ProfessorDashboard - user state:", user?.username, user?.role);
+    
+    // This check is now handled by the ProtectedRoute component in App.tsx
+    // but we'll keep it here as a double-check
     if (user && user.role !== 'professor') {
+      console.log("User with non-professor role accessing professor dashboard:", user.role);
       toast({
         title: 'Access Denied',
         description: 'You need professor privileges to access this page.',
