@@ -81,32 +81,71 @@ const ChatBot: React.FC<ChatBotProps> = ({
     setIsSubmitting(true);
     
     try {
-      // This would normally be an API call to get the AI response
-      // Simulating a delay
-      setTimeout(() => {
-        // Mock AI response
-        const botMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'bot',
-          text: `This is a simulated response to your question: "${input}"\n\nIn the Moral Reasoning module, we explore ethical decision-making frameworks that help leaders navigate complex situations. The provided reading in Chapter 15 outlines several approaches including consequentialism, deontology, and virtue ethics.`,
-          timestamp: new Date(),
-          sources: [
-            {
-              title: 'Chapter 15 - Leadership Ethics',
-              page: 267,
-              highlight: 'Ethical decision-making frameworks help leaders navigate complex situations...'
-            },
-            {
-              title: 'Moral Vignettes',
-              page: 3,
-              highlight: 'Case Study 2 illustrates the tension between personal values and organizational demands...'
-            }
-          ]
-        };
-        
-        setMessages(prev => [...prev, botMessage]);
-        setIsSubmitting(false);
-      }, 1500);
+      // Make API call to get AI response
+      const response = await fetch(`/api/student/courses/${moduleId}/ask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: input }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Process the sources from the API
+      let sourcesList: { title: string, page?: number, highlight?: string }[] = [];
+      
+      if (data.sources) {
+        const sourceNames = data.sources.split(',');
+        sourcesList = sourceNames.map((source: string) => ({
+          title: source.trim(),
+          page: null, // In a real app, we would have more detailed source info
+          highlight: null
+        }));
+      }
+      
+      // Create the bot message with the response
+      const botMessage: ChatMessage = {
+        id: data.id?.toString() || (Date.now() + 1).toString(),
+        type: 'bot',
+        text: data.answer || "I'm sorry, I couldn't generate a response at this time.",
+        timestamp: new Date(data.timestamp || Date.now()),
+        sources: sourcesList.length > 0 ? sourcesList : undefined
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
+      setIsSubmitting(false);
+      
+      // Fallback to mock response if API fails
+      if (!data.answer) {
+        setTimeout(() => {
+          // Mock AI response
+          const mockBotMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'bot',
+            text: `This is a simulated response to your question: "${input}"\n\nIn the Moral Reasoning module, we explore ethical decision-making frameworks that help leaders navigate complex situations. The provided reading in Chapter 15 outlines several approaches including consequentialism, deontology, and virtue ethics.`,
+            timestamp: new Date(),
+            sources: [
+              {
+                title: 'Chapter 15 - Leadership Ethics',
+                page: 267,
+                highlight: 'Ethical decision-making frameworks help leaders navigate complex situations...'
+              },
+              {
+                title: 'Moral Vignettes',
+                page: 3,
+                highlight: 'Case Study 2 illustrates the tension between personal values and organizational demands...'
+              }
+            ]
+          };
+          
+          setMessages(prev => [...prev, mockBotMessage]);
+        }, 100);
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
       toast({

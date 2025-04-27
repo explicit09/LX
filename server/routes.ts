@@ -435,6 +435,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from uploads directory
   app.use("/api/uploads", express.static(path.join(process.cwd(), "uploads")));
   
+  // Process sample document for testing (DEVELOPMENT ONLY)
+  app.post("/api/process-sample-document", isProfessor, async (req, res, next) => {
+    try {
+      const { courseId } = req.body;
+      
+      if (!courseId) {
+        return res.status(400).json({ message: "Course ID is required" });
+      }
+      
+      // Process the sample document
+      const filePath = path.join(process.cwd(), "uploads", "leadership_ethics.txt");
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Sample document not found" });
+      }
+      
+      await processDocument(filePath, parseInt(courseId));
+      
+      res.json({ message: "Sample document processed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Create and return the HTTP server
   const httpServer = createServer(app);
   return httpServer;
