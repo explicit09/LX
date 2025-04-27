@@ -40,11 +40,8 @@ const Courses = () => {
   };
 
   const handleManageCourse = (courseId: number) => {
-    // Navigate to course detail page (to be implemented)
-    toast({
-      title: "Not implemented",
-      description: "Course management detail view is not yet implemented.",
-    });
+    // Navigate to course detail page
+    navigate(`/professor/courses/${courseId}`);
   };
 
   const handleViewReports = (courseId: number) => {

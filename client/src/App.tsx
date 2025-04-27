@@ -14,6 +14,7 @@ import Landing from "@/pages/Landing";
 // Professor pages
 import ProfessorDashboard from "@/pages/professor/Dashboard";
 import ProfessorCourses from "@/pages/professor/Courses";
+import ProfessorCourseDetail from "@/pages/professor/CourseDetail";
 import ProfessorMaterials from "@/pages/professor/Materials";
 import ProfessorReports from "@/pages/professor/Reports";
 
@@ -47,8 +48,10 @@ function Router() {
       {/* Professor routes */}
       <Route path="/professor/dashboard" component={ProfessorDashboard} />
       <Route path="/professor/courses" component={ProfessorCourses} />
+      <Route path="/professor/courses/:id" component={ProfessorCourseDetail} />
       <Route path="/professor/materials" component={ProfessorMaterials} />
       <Route path="/professor/reports" component={ProfessorReports} />
+      <Route path="/professor/reports/:id" component={ProfessorReports} />
       
       {/* Student routes */}
       <Route path="/student/dashboard" component={StudentDashboard} />
