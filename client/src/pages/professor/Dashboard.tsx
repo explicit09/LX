@@ -52,8 +52,9 @@ const ProfessorDashboard = () => {
   };
 
   const handleViewMaterial = (material: Material) => {
-    // Implement viewing a material
-    window.open(`/api/uploads/${material.type}/${path.basename(material.path)}`, "_blank");
+    // Implement viewing a material - extract filename from path
+    const filename = material.path.split('/').pop();
+    window.open(`/api/uploads/${material.type}/${filename}`, "_blank");
   };
 
   const handleDeleteMaterial = (material: Material) => {
@@ -181,8 +182,8 @@ const ProfessorDashboard = () => {
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-medium text-gray-900">Recent Materials</h2>
-                <Link href="/professor/materials">
-                  <a className="text-primary hover:underline text-sm font-medium">View All</a>
+                <Link to="/professor/materials">
+                  <span className="text-primary hover:underline text-sm font-medium cursor-pointer">View All</span>
                 </Link>
               </div>
               
@@ -233,6 +234,3 @@ const ProfessorDashboard = () => {
 };
 
 export default ProfessorDashboard;
-
-// Temporary import for path operations
-import path from "path";

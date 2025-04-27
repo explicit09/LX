@@ -53,8 +53,8 @@ const TopNav = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link href="/">
-              <a className="text-xl font-bold text-primary">LINK-X</a>
+            <Link to="/">
+              <span className="text-xl font-bold text-primary cursor-pointer">EduQuest</span>
             </Link>
           </div>
 
@@ -73,13 +73,13 @@ const TopNav = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
-                    <a className="cursor-pointer">Your Profile</a>
+                  <Link to="/profile">
+                    <span className="w-full cursor-pointer">Your Profile</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <a className="cursor-pointer">Settings</a>
+                  <Link to="/settings">
+                    <span className="w-full cursor-pointer">Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

@@ -20,10 +20,10 @@ interface NavItemProps {
 }
 
 const NavItem = ({ href, icon, children, isActive }: NavItemProps) => (
-  <Link href={href}>
-    <a
+  <Link to={href}>
+    <div
       className={cn(
-        "flex items-center px-2 py-2 text-sm font-medium rounded-md",
+        "flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
         isActive
           ? "bg-blue-50 text-primary"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -38,7 +38,7 @@ const NavItem = ({ href, icon, children, isActive }: NavItemProps) => (
         {icon}
       </span>
       {children}
-    </a>
+    </div>
   </Link>
 );
 
@@ -122,9 +122,9 @@ const SideNav = ({ navItems, courses, activeStatus }: SideNavProps) => {
             <ul className="space-y-2">
               {courses.map((course) => (
                 <li key={course.id}>
-                  <Link href={`/student/course/${course.id}/chat`}>
-                    <a className={cn(
-                      "flex items-center text-sm font-medium hover:text-primary",
+                  <Link to={`/student/course/${course.id}/chat`}>
+                    <div className={cn(
+                      "flex items-center text-sm font-medium hover:text-primary cursor-pointer",
                       location === `/student/course/${course.id}/chat` 
                         ? "text-primary" 
                         : "text-gray-700"
@@ -137,7 +137,7 @@ const SideNav = ({ navItems, courses, activeStatus }: SideNavProps) => {
                         }`} 
                       />
                       {course.name}
-                    </a>
+                    </div>
                   </Link>
                 </li>
               ))}
