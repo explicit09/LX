@@ -63,22 +63,26 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* Navigation Bar */}
-      <header className="bg-white py-3 px-6 border-b sticky top-0 z-10">
+      <header className="bg-white py-3 px-6 border-b sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
-            <img 
-              src={LogoImage} 
-              alt="LEARN-X Logo" 
-              className="h-8 cursor-pointer" 
-              onClick={navigateToLanding}
-            />
+            <div className="flex items-center space-x-1" onClick={navigateToLanding} style={{ cursor: 'pointer' }}>
+              <img 
+                src={LogoImage} 
+                alt="LEARN-X Logo" 
+                className="h-9" 
+              />
+              <div className="font-bold text-xl ml-1 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                LEARN-X
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm" 
-              className="text-gray-600 hidden md:flex items-center" 
+              className="text-blue-600 border-blue-200 hidden md:flex items-center hover:bg-blue-50 hover:text-blue-700" 
               onClick={() => refetchCourses()}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -89,10 +93,10 @@ const Dashboard = () => {
               {user && (
                 <div className="hidden md:block text-right">
                   <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-gray-500">Student</p>
+                  <p className="text-xs text-gray-500">Student Account</p>
                 </div>
               )}
-              <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold shadow-sm">
                 {user?.name.charAt(0) || 'U'}
               </div>
             </div>
@@ -102,14 +106,19 @@ const Dashboard = () => {
       
       <div className="flex-1 flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r h-[calc(100vh-56px)] sticky top-14 hidden md:block">
+        <aside className="w-64 bg-white border-r h-[calc(100vh-56px)] sticky top-14 hidden md:block shadow-sm">
           <nav className="p-4">
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-500 mb-2 px-3">MAIN MENU</p>
+              <div className="flex items-center justify-between mb-2 px-3">
+                <p className="text-xs font-semibold text-gray-500">NAVIGATION</p>
+                <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-xs text-blue-600 font-medium">3</span>
+                </div>
+              </div>
               <div className="space-y-1">
                 <a 
                   href="#" 
-                  className="flex items-center text-blue-600 bg-blue-50 px-3 py-2 rounded-md font-medium text-sm"
+                  className="flex items-center text-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-md font-medium text-sm border-l-2 border-blue-600"
                 >
                   <Book className="h-4 w-4 mr-3" />
                   My Courses
@@ -131,24 +140,44 @@ const Dashboard = () => {
               </div>
             </div>
             
-            <div>
-              <p className="text-xs font-semibold text-gray-500 mb-2 px-3">MY LEARNING</p>
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-gray-500 mb-2 px-3">MY COURSES</p>
               {courses.length > 0 ? (
                 <div className="space-y-1">
                   {courses.slice(0, 5).map((course) => (
                     <a 
                       key={course.id}
                       href={`/student/course/${course.id}/chat`}
-                      className="flex items-center text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md font-medium text-sm"
+                      className="flex items-center text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md font-medium text-sm group"
                     >
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                      {course.name}
+                      <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mr-3 group-hover:scale-125 transition-transform"></div>
+                      <span className="truncate">{course.name}</span>
                     </a>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 px-3">No courses yet</p>
+                <div className="px-3 py-2 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-500">No courses yet</p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleJoinCourse}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-0 mt-1 text-xs h-auto"
+                  >
+                    + Join a course
+                  </Button>
+                </div>
               )}
+            </div>
+            
+            <div className="mt-auto pt-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Need Help?</h4>
+                <p className="text-xs text-gray-600 mb-3">Contact your professor or institution for assistance with course materials</p>
+                <div className="text-xs text-blue-600">
+                  <a href="#" className="hover:underline">Contact Support</a>
+                </div>
+              </div>
             </div>
           </nav>
         </aside>
