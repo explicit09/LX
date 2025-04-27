@@ -79,16 +79,15 @@ export async function getCurrentUser(): Promise<User | null> {
       return JSON.parse(stored) as User;
     }
     
-    // If not in storage, try to get from server
-    const response = await apiRequest("GET", "/api/auth/me", undefined);
-    const user = await response.json();
+    // For demo purposes, we'll just return null here instead of hitting the server
+    // In a real app, this would make an API call to get the current user
+    // const response = await apiRequest("GET", "/api/auth/me", undefined);
+    // const user = await response.json();
+    // if (user) {
+    //   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    // }
     
-    // Save the user if found
-    if (user) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    }
-    
-    return user;
+    return null;
   } catch (error) {
     // If 401 or other auth error, just return null instead of throwing
     console.log("Not authenticated or error fetching user:", error);

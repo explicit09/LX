@@ -25,6 +25,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
+// Helper function to generate a random access code
+function generateAccessCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 // Form schema
 const formSchema = z.object({
   name: z.string().min(3, "Course name must be at least 3 characters"),
@@ -69,6 +79,22 @@ const CreateCourseModal = ({
       //   ...values,
       //   startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
       // });
+      
+      // Create a mock course object with the form values
+      const newCourse = {
+        id: Math.floor(Math.random() * 10000) + 100, // Generate a random ID
+        name: values.name,
+        description: values.description || "",
+        accessCode: generateAccessCode(),
+        professorId: 1, // Current user ID
+        createdAt: new Date().toISOString(),
+        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+        studentCount: 0,
+        materialCount: 0
+      };
+      
+      // Store in localStorage for the dashboard to pick up
+      localStorage.setItem('course_added', JSON.stringify(newCourse));
       
       toast({
         title: "Course created",

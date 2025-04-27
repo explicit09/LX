@@ -153,6 +153,24 @@ const UploadMaterialsModal = ({
       //   }
       // }
       
+      // For demo purposes, create mock material objects
+      const newMaterials = files.map((file, index) => {
+        const courseId = parseInt(selectedCourseId);
+        const fileType = file.type.includes('pdf') ? 'pdf' : 'audio';
+        
+        return {
+          id: Date.now() + index, // Generate unique IDs
+          courseId,
+          name: file.name,
+          type: fileType,
+          path: `/uploads/${fileType}s/${file.name.replace(/\s+/g, '-')}`,
+          uploadDate: new Date().toISOString()
+        };
+      });
+      
+      // Store in localStorage for the dashboard to pick up
+      localStorage.setItem('materials_added', JSON.stringify(newMaterials));
+      
       toast({
         title: "Upload Successful",
         description: `Successfully uploaded ${files.length} files.`,

@@ -46,7 +46,31 @@ const ProfessorDashboard = () => {
     }
   ]);
   const coursesLoading = false;
-  const refetchCourses = () => console.log("Refetching courses...");
+  
+  // Function to add a new course to our mock data
+  const refetchCourses = () => {
+    // In a real app, this would fetch data from the server
+    // For demo, we'll simulate a new course being added when creating a course
+    const courseAdded = localStorage.getItem('course_added');
+    if (courseAdded) {
+      try {
+        const newCourse = JSON.parse(courseAdded);
+        // Check if course already exists in our list
+        const exists = courses.some(c => c.id === newCourse.id);
+        if (!exists) {
+          setCourses(prev => [...prev, newCourse]);
+        }
+        localStorage.removeItem('course_added');
+      } catch (e) {
+        console.error("Error parsing new course data", e);
+      }
+    }
+  };
+  
+  // Check for new courses when component mounts
+  useEffect(() => {
+    refetchCourses();
+  }, []);
 
   // Mock materials data for demo
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([
@@ -68,7 +92,32 @@ const ProfessorDashboard = () => {
     }
   ]);
   const materialsLoading = false;
-  const refetchMaterials = () => console.log("Refetching materials...");
+  
+  // Function to handle adding new materials (from mock upload)
+  const refetchMaterials = () => {
+    // In a real app, this would fetch updated materials from the server
+    // For demo, we'll check if there are materials added via local storage
+    const materialsAdded = localStorage.getItem('materials_added');
+    if (materialsAdded) {
+      try {
+        const newMaterials = JSON.parse(materialsAdded) as Material[];
+        if (Array.isArray(newMaterials) && newMaterials.length > 0) {
+          // Filter to ensure we don't add duplicates
+          const newIds = new Set(newMaterials.map(m => m.id));
+          const existingMaterials = recentMaterials.filter(m => !newIds.has(m.id));
+          setRecentMaterials([...existingMaterials, ...newMaterials]);
+        }
+        localStorage.removeItem('materials_added');
+      } catch (e) {
+        console.error("Error parsing new materials data", e);
+      }
+    }
+  };
+  
+  // Check for new materials when component mounts
+  useEffect(() => {
+    refetchMaterials();
+  }, []);
 
   const handleCreateCourse = () => {
     setCreateCourseModalOpen(true);
