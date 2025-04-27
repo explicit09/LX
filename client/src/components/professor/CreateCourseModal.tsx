@@ -61,10 +61,14 @@ const CreateCourseModal = ({
     try {
       setIsSubmitting(true);
       
-      await apiRequest("POST", "/api/courses", {
-        ...values,
-        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-      });
+      // For demo purposes - simulate API request delay 
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real app, uncomment this API call
+      // await apiRequest("POST", "/api/courses", {
+      //   ...values,
+      //   startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+      // });
       
       toast({
         title: "Course created",

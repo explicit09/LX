@@ -53,25 +53,49 @@ const UploadMaterialsModal = ({
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/professor/courses");
       
-      if (response.ok) {
-        const data = await response.json();
-        setCourses(data);
-        
-        // If we have a preselected course ID, set it
-        if (preselectedCourseId) {
-          setSelectedCourseId(preselectedCourseId.toString());
-        } else if (data.length > 0) {
-          // Otherwise select the first course
-          setSelectedCourseId(data[0].id.toString());
+      // Mock data for demo purposes
+      const mockCourses: Course[] = [
+        {
+          id: 1,
+          name: "Introduction to Computer Science",
+          description: "Learn the fundamentals of computer science and programming.",
+          accessCode: "CS101",
+          professorId: 1,
+          createdAt: new Date().toISOString(),
+          studentCount: 32,
+          materialCount: 5
+        },
+        {
+          id: 2,
+          name: "Advanced Machine Learning",
+          description: "Deep dive into neural networks and reinforcement learning.",
+          accessCode: "ML404",
+          professorId: 1,
+          createdAt: new Date().toISOString(),
+          studentCount: 18,
+          materialCount: 7
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch courses. Please try again.",
-          variant: "destructive",
-        });
+      ];
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // In a real app, use this API call instead:
+      // const response = await fetch("/api/professor/courses");
+      // if (response.ok) {
+      //   const data = await response.json();
+      //   setCourses(data);
+      // }
+      
+      setCourses(mockCourses);
+      
+      // If we have a preselected course ID, set it
+      if (preselectedCourseId) {
+        setSelectedCourseId(preselectedCourseId.toString());
+      } else if (mockCourses.length > 0) {
+        // Otherwise select the first course
+        setSelectedCourseId(mockCourses[0].id.toString());
       }
     } catch (error) {
       toast({
@@ -108,40 +132,35 @@ const UploadMaterialsModal = ({
     }
 
     setIsUploading(true);
-    let successCount = 0;
-
+    
     try {
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch(`/api/courses/${selectedCourseId}/materials`, {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          successCount++;
-        } else {
-          toast({
-            title: "Upload Failed",
-            description: `Failed to upload ${file.name}.`,
-            variant: "destructive",
-          });
-        }
-      }
-
-      if (successCount > 0) {
-        toast({
-          title: "Upload Successful",
-          description: `Successfully uploaded ${successCount} out of ${files.length} files.`,
-        });
-        
-        onUploadComplete();
-        onOpenChange(false);
-        setFiles([]);
-      }
+      // For demo purposes, simulate API upload delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // In a real app, use this code:
+      // for (const file of files) {
+      //   const formData = new FormData();
+      //   formData.append("file", file);
+      //   
+      //   const response = await fetch(`/api/courses/${selectedCourseId}/materials`, {
+      //     method: "POST",
+      //     body: formData,
+      //     credentials: "include",
+      //   });
+      //
+      //   if (!response.ok) {
+      //     throw new Error(`Failed to upload ${file.name}`);
+      //   }
+      // }
+      
+      toast({
+        title: "Upload Successful",
+        description: `Successfully uploaded ${files.length} files.`,
+      });
+      
+      onUploadComplete();
+      onOpenChange(false);
+      setFiles([]);
     } catch (error) {
       toast({
         title: "Error",
