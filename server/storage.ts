@@ -38,6 +38,7 @@ export interface IStorage {
   // Chat operations
   createChatItem(chatItem: InsertChatItem): Promise<ChatItem>;
   getStudentChatHistory(studentId: number, courseId: number): Promise<ChatItem[]>;
+  getCourseChatHistory(courseId: number): Promise<ChatItem[]>;
   
   // Session store for express-session
   sessionStore: SessionStore;

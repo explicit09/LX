@@ -293,6 +293,266 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // =====================
+  // Professor Analytics API
+  // =====================
+
+  // Get course analytics dashboard data
+  app.get("/api/professor/courses/:id/analytics", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      // Get all chat history for this course
+      const allChatItems = await storage.getCourseChatHistory(courseId);
+      const students = await storage.getCourseStudents(courseId);
+      
+      // Calculate total questions
+      const totalQuestions = allChatItems.length;
+      
+      // Extract common topics from questions
+      // For demo purposes, we'll extract basic keywords from questions
+      const topicCounts: Record<string, number> = {};
+      const keywords = ['ethics', 'leadership', 'theory', 'example', 'definition', 'concept', 'application'];
+      
+      allChatItems.forEach(item => {
+        keywords.forEach(keyword => {
+          if (item.question.toLowerCase().includes(keyword)) {
+            topicCounts[keyword] = (topicCounts[keyword] || 0) + 1;
+          }
+        });
+      });
+      
+      // Format common topics
+      const commonTopics = Object.entries(topicCounts)
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      
+      // Return analysis
+      res.json({
+        courseId,
+        courseName: course.name,
+        totalQuestions,
+        totalStudents: students.length,
+        commonTopics
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Get student interaction data for a course
+  app.get("/api/professor/courses/:id/students", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      const students = await storage.getCourseStudents(courseId);
+      const allChatItems = await storage.getCourseChatHistory(courseId);
+      
+      // Create student interaction data
+      const studentInteractions = students.map(student => {
+        // Filter chat items for this student
+        const studentChatItems = allChatItems.filter(item => item.studentId === student.id);
+        
+        // Extract topics from questions (simplified)
+        const topicCounts: Record<string, number> = {};
+        const keywords = ['ethics', 'leadership', 'theory', 'example', 'definition', 'concept', 'application'];
+        
+        studentChatItems.forEach(item => {
+          keywords.forEach(keyword => {
+            if (item.question.toLowerCase().includes(keyword)) {
+              topicCounts[keyword] = (topicCounts[keyword] || 0) + 1;
+            }
+          });
+        });
+        
+        // Format topics
+        const topics = Object.entries(topicCounts)
+          .map(([topic, count]) => ({ topic, count }))
+          .sort((a, b) => b.count - a.count);
+        
+        // Find last interaction time
+        const lastInteraction = studentChatItems.length > 0
+          ? studentChatItems.sort((a, b) => 
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            )[0].timestamp
+          : student.createdAt;
+        
+        // Remove password and return safe student interaction data
+        const { password, ...safeStudent } = student;
+        
+        return {
+          studentId: student.id,
+          studentName: student.name,
+          questionCount: studentChatItems.length,
+          lastInteraction,
+          topics
+        };
+      });
+      
+      res.json(studentInteractions);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Get chat statistics for a course
+  app.get("/api/professor/courses/:id/chat-stats", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      const allChatItems = await storage.getCourseChatHistory(courseId);
+      const students = await storage.getCourseStudents(courseId);
+      
+      // Calculate total questions
+      const totalQuestions = allChatItems.length;
+      
+      // Calculate average questions per student
+      const averageQuestionsPerStudent = students.length > 0 
+        ? totalQuestions / students.length 
+        : 0;
+      
+      // Calculate questions per day for the last 7 days
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+      
+      // Group chat items by day
+      const questionsPerDay: { date: string; count: number }[] = [];
+      
+      // Create a map for the last 7 days
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        questionsPerDay.push({
+          date: date.toISOString().split('T')[0],
+          count: 0
+        });
+      }
+      
+      // Count questions for each day
+      allChatItems.forEach(item => {
+        const itemDate = new Date(item.timestamp);
+        itemDate.setHours(0, 0, 0, 0);
+        
+        if (itemDate >= sevenDaysAgo) {
+          const dateString = itemDate.toISOString().split('T')[0];
+          const dayEntry = questionsPerDay.find(d => d.date === dateString);
+          
+          if (dayEntry) {
+            dayEntry.count++;
+          }
+        }
+      });
+      
+      // Sort by date (oldest first)
+      questionsPerDay.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      // Find the day with most questions
+      const topQuestionsPerDay = Math.max(...questionsPerDay.map(d => d.count));
+      
+      res.json({
+        totalQuestions,
+        averageQuestionsPerStudent,
+        topQuestionsPerDay,
+        questionsPerDay
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Get material usage statistics for a course
+  app.get("/api/professor/courses/:id/material-stats", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      const materials = await storage.getCourseMaterials(courseId);
+      const allChatItems = await storage.getCourseChatHistory(courseId);
+      
+      // Count PDFs and audio materials
+      const totalPdfCount = materials.filter(m => m.type === 'pdf').length;
+      const totalAudioCount = materials.filter(m => m.type === 'audio').length;
+      
+      // Calculate material reference counts from chat sources
+      const materialReferenceCounts: Record<number, { id: number; name: string; count: number }> = {};
+      
+      // Initialize with all materials (even those with zero references)
+      materials.forEach(material => {
+        materialReferenceCounts[material.id] = {
+          id: material.id,
+          name: material.name,
+          count: 0
+        };
+      });
+      
+      // Count references in chat items
+      allChatItems.forEach(chatItem => {
+        if (chatItem.sources) {
+          try {
+            const sources = JSON.parse(chatItem.sources);
+            sources.forEach((source: { materialId: number }) => {
+              if (materialReferenceCounts[source.materialId]) {
+                materialReferenceCounts[source.materialId].count++;
+              }
+            });
+          } catch (e) {
+            // Skip if sources JSON cannot be parsed
+          }
+        }
+      });
+      
+      // Convert to array and sort by count
+      const mostReferencedMaterials = Object.values(materialReferenceCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+      
+      res.json({
+        totalPdfCount,
+        totalAudioCount,
+        mostReferencedMaterials
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // ==================
   // Student API routes
   // ==================
