@@ -6,10 +6,6 @@ import { Document } from "@langchain/core/documents";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { createEmbedding, summarizeDocument } from "./openai";
 
-// FAISS is a library for efficient similarity search
-// We're using a JS version - faiss-node
-import Faiss from "faiss-node";
-
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const INDEXES_DIR = path.join(UPLOAD_DIR, "indexes");
 const CHUNK_SIZE = 1000;
@@ -139,7 +135,7 @@ export async function updateVectorStore(vectorDbPath: string, newChunks: Documen
  */
 export async function queryVectorStore(vectorDbPath: string, question: string): Promise<{ content: string, sources: string[] }> {
   try {
-    // Check if JSON file exists - we can work with just this if needed
+    // Check if JSON file exists
     if (!fsSync.existsSync(`${vectorDbPath}.json`)) {
       return {
         content: "No course materials have been indexed yet.",
@@ -147,59 +143,36 @@ export async function queryVectorStore(vectorDbPath: string, question: string): 
       };
     }
     
-    // Load the index and chunks
-    const index: any = new Faiss.Index(1536);
-    let hasFaissIndex = false;
-    
-    // Try to load the FAISS index if it exists
-    if (fsSync.existsSync(`${vectorDbPath}.faiss`)) {
-      try {
-        // Try different methods that might exist depending on the library version
-        if (typeof index.readFromFile === 'function') {
-          await (index.readFromFile as Function)(`${vectorDbPath}.faiss`);
-          hasFaissIndex = true;
-        } else if (typeof index.read === 'function') {
-          await (index.read as Function)(`${vectorDbPath}.faiss`);
-          hasFaissIndex = true;
-        } else {
-          console.warn("FAISS index methods not available, using JSON-only fallback");
-        }
-      } catch (error: any) {
-        console.warn(`Could not load FAISS index, using JSON-only fallback: ${error?.message || String(error)}`);
-      }
-    }
-    
     // Load the chunks from JSON
     const data = await fs.readFile(`${vectorDbPath}.json`, 'utf8');
     const chunks: DocumentChunk[] = JSON.parse(data);
     
+    if (chunks.length === 0) {
+      return {
+        content: "No course materials have been indexed yet.",
+        sources: [],
+      };
+    }
+    
     // Create embedding for the question
     const questionEmbedding = await createEmbedding(question);
     
-    let relevantChunks: DocumentChunk[] = [];
+    // Compute cosine similarity between question embedding and each chunk embedding
+    const similarities: { index: number; score: number }[] = [];
     
-    // If we have a FAISS index, use it for searching
-    if (hasFaissIndex) {
-      try {
-        const TOP_K = 5;
-        const searchResults = index.search(questionEmbedding, TOP_K);
-        
-        // Convert search results to chunks
-        for (let i = 0; i < searchResults.length; i++) {
-          const resultId = searchResults[i].id;
-          if (chunks[resultId]) {
-            relevantChunks.push(chunks[resultId]);
-          }
-        }
-      } catch (error: any) {
-        console.warn(`FAISS search failed, falling back to simple methods: ${error?.message || String(error)}`);
-      }
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkEmbedding = chunks[i].embedding;
+      const similarity = cosineSimilarity(questionEmbedding, chunkEmbedding);
+      similarities.push({ index: i, score: similarity });
     }
     
-    // If we couldn't get results from FAISS, just use the first few chunks
-    if (relevantChunks.length === 0) {
-      relevantChunks = chunks.slice(0, Math.min(5, chunks.length));
-    }
+    // Sort by similarity score (descending)
+    similarities.sort((a, b) => b.score - a.score);
+    
+    // Get top 5 most relevant chunks
+    const TOP_K = 5;
+    const topIndices = similarities.slice(0, TOP_K).map(item => item.index);
+    const relevantChunks = topIndices.map(index => chunks[index]);
     
     // Collect the relevant chunks and their sources
     let relevantContent = "";
@@ -218,6 +191,32 @@ export async function queryVectorStore(vectorDbPath: string, question: string): 
     console.error("Error querying vector store:", error);
     throw new Error(`Failed to query vector store: ${error?.message || String(error)}`);
   }
+}
+
+// Helper function to compute cosine similarity between two vectors
+function cosineSimilarity(vec1: number[], vec2: number[]): number {
+  if (vec1.length !== vec2.length) {
+    throw new Error("Vectors must have the same length");
+  }
+  
+  let dotProduct = 0;
+  let mag1 = 0;
+  let mag2 = 0;
+  
+  for (let i = 0; i < vec1.length; i++) {
+    dotProduct += vec1[i] * vec2[i];
+    mag1 += vec1[i] * vec1[i];
+    mag2 += vec2[i] * vec2[i];
+  }
+  
+  mag1 = Math.sqrt(mag1);
+  mag2 = Math.sqrt(mag2);
+  
+  if (mag1 === 0 || mag2 === 0) {
+    return 0;
+  }
+  
+  return dotProduct / (mag1 * mag2);
 }
 
 /**
