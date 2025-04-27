@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLocation } from 'wouter';
 
 interface ContinualLearningBannerProps {
   coursesInProgress?: number;
@@ -13,6 +14,7 @@ const ContinualLearningBanner = ({
   completionPercentage = 0,
   timeSpentThisWeek = 0
 }: ContinualLearningBannerProps) => {
+  const [location, navigate] = useLocation();
   
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50 p-6 mb-8">
@@ -53,7 +55,16 @@ const ContinualLearningBanner = ({
         <div className="w-full md:w-auto flex">
           <Button 
             className="w-full md:w-auto flex items-center"
-            onClick={() => window.location.href = '#resume-learning'}
+            onClick={() => {
+              // Navigate to the most recent course if there are courses
+              if (coursesInProgress > 0) {
+                // Use API to get most recent course 
+                navigate('/courses/recent');
+              } else {
+                // Navigate to course discovery if no courses
+                navigate('/courses/discover');
+              }
+            }}
           >
             Resume Learning
             <ArrowRight className="ml-2 h-4 w-4" />

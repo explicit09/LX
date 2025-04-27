@@ -20,6 +20,10 @@ export interface Course {
   createdAt: string;
   studentCount?: number;
   materialCount?: number;
+  // Progress tracking
+  completionPercentage?: number;
+  timeSpentThisWeek?: number;
+  lastAccessed?: string;
 }
 
 // Material-related types
@@ -83,4 +87,15 @@ export interface MaterialStats {
   totalPdfCount: number;
   totalAudioCount: number;
   mostReferencedMaterials: Array<{ id: number; name: string; count: number }>;
+}
+
+// Todo item type
+export interface TodoItem {
+  id: number;
+  title: string;
+  dueDate: string;
+  courseId: number;
+  courseName: string;
+  type: 'assignment' | 'quiz' | 'reading';
+  completed: boolean;
 }

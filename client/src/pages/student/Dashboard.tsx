@@ -11,24 +11,14 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 const StudentDashboard = () => {
-  console.log("Rendering StudentDashboard component");
   const { user } = useUser();
-  console.log("User:", user);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // We'll use data from the API only
-  
-  // Fetch student's courses (using demo data for now)
-  const { data: apiCourses = [], isLoading } = useQuery<Course[]>({
+  // Fetch student's courses 
+  const { data: courses = [], isLoading } = useQuery<Course[]>({
     queryKey: ['/api/student/courses'],
     enabled: !!user,
   });
-  
-  // Use courses from API
-  const courses = apiCourses;
-  
-  console.log("Courses:", courses);
-  console.log("isLoading:", isLoading);
   
   // Filter courses based on search term
   const filteredCourses = courses.filter((course: Course) => 
@@ -36,10 +26,22 @@ const StudentDashboard = () => {
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  console.log("FilteredCourses:", filteredCourses);
-  
-  // For demo purposes, we'll render the UI even if user is null
-  // In a real app, we would redirect to login or show a message
+  // We should show a login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+        <div className="p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md max-w-md w-full text-center">
+          <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+          <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+            Please log in to access your student dashboard.
+          </p>
+          <Button asChild>
+            <a href="/auth">Go to Login</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <CanvasLayout 
@@ -49,8 +51,10 @@ const StudentDashboard = () => {
       {/* Continual Learning Banner */}
       <ContinualLearningBanner 
         coursesInProgress={courses.length} 
-        completionPercentage={courses.length > 0 ? 35 : 0} // This would ideally come from an API endpoint tracking progress
-        timeSpentThisWeek={courses.length > 0 ? 5 : 0} // This would ideally come from an API endpoint tracking time
+        completionPercentage={courses.reduce((acc, course) => 
+          acc + (course.completionPercentage || 0), 0) / (courses.length || 1)}
+        timeSpentThisWeek={courses.reduce((acc, course) => 
+          acc + (course.timeSpentThisWeek || 0), 0)}
       />
       
       {/* Search and Filter */}
