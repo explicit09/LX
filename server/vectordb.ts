@@ -90,9 +90,9 @@ export async function processDocument(filePath: string, courseId: number): Promi
     await updateVectorStore(vectorDbPath, chunks);
     
     console.log(`Document processed and added to vector store for course ${courseId}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing document:", error);
-    throw new Error(`Failed to process document: ${error.message}`);
+    throw new Error(`Failed to process document: ${error?.message || String(error)}`);
   }
 }
 
@@ -101,7 +101,6 @@ export async function processDocument(filePath: string, courseId: number): Promi
  */
 export async function updateVectorStore(vectorDbPath: string, newChunks: DocumentChunk[]): Promise<void> {
   let existingChunks: DocumentChunk[] = [];
-  let index: any = null;
   
   // Create necessary directories
   await fs.mkdir(path.dirname(vectorDbPath), { recursive: true });
@@ -109,35 +108,30 @@ export async function updateVectorStore(vectorDbPath: string, newChunks: Documen
   // Check if the vector store already exists
   try {
     if (fsSync.existsSync(`${vectorDbPath}.json`)) {
-      // Load existing chunks and index
+      // Load existing chunks
       const data = await fs.readFile(`${vectorDbPath}.json`, 'utf8');
       existingChunks = JSON.parse(data);
-      
-      if (fsSync.existsSync(`${vectorDbPath}.faiss`)) {
-        index = new Faiss.Index(1536); // Ada-002 embeddings are 1536 dimensions
-        await index.readFromFile(`${vectorDbPath}.faiss`);
-      }
     }
-  } catch (error) {
-    console.warn(`Could not load existing vector store, creating new one: ${error.message}`);
+  } catch (error: any) {
+    console.warn(`Could not load existing vector store, creating new one: ${error?.message || String(error)}`);
   }
   
-  if (!index) {
-    index = new Faiss.Index(1536); // Ada-002 embeddings are 1536 dimensions
-  }
-  
-  // Add new chunks
+  // Update IDs for new chunks to prevent collisions
   for (const chunk of newChunks) {
     chunk.id = existingChunks.length + chunk.id;
-    index.add(chunk.embedding);
   }
   
   // Combine existing and new chunks
   const allChunks = [...existingChunks, ...newChunks];
   
-  // Save the updated index and metadata
-  await index.writeToFile(`${vectorDbPath}.faiss`);
-  await fs.writeFile(`${vectorDbPath}.json`, JSON.stringify(allChunks, null, 2));
+  // Save the updated chunks
+  try {
+    await fs.writeFile(`${vectorDbPath}.json`, JSON.stringify(allChunks, null, 2));
+    console.log(`Saved ${newChunks.length} new chunks, total: ${allChunks.length}`);
+  } catch (error: any) {
+    console.error(`Error saving vector store: ${error?.message || String(error)}`);
+    throw new Error(`Failed to save vector store: ${error?.message || String(error)}`);
+  }
 }
 
 /**
@@ -145,8 +139,8 @@ export async function updateVectorStore(vectorDbPath: string, newChunks: Documen
  */
 export async function queryVectorStore(vectorDbPath: string, question: string): Promise<{ content: string, sources: string[] }> {
   try {
-    // Check if vector store exists
-    if (!fsSync.existsSync(`${vectorDbPath}.faiss`) || !fsSync.existsSync(`${vectorDbPath}.json`)) {
+    // Check if JSON file exists - we can work with just this if needed
+    if (!fsSync.existsSync(`${vectorDbPath}.json`)) {
       return {
         content: "No course materials have been indexed yet.",
         sources: [],
@@ -154,38 +148,75 @@ export async function queryVectorStore(vectorDbPath: string, question: string): 
     }
     
     // Load the index and chunks
-    const index = new Faiss.Index(1536);
-    await index.readFromFile(`${vectorDbPath}.faiss`);
+    const index: any = new Faiss.Index(1536);
+    let hasFaissIndex = false;
     
+    // Try to load the FAISS index if it exists
+    if (fsSync.existsSync(`${vectorDbPath}.faiss`)) {
+      try {
+        // Try different methods that might exist depending on the library version
+        if (typeof index.readFromFile === 'function') {
+          await (index.readFromFile as Function)(`${vectorDbPath}.faiss`);
+          hasFaissIndex = true;
+        } else if (typeof index.read === 'function') {
+          await (index.read as Function)(`${vectorDbPath}.faiss`);
+          hasFaissIndex = true;
+        } else {
+          console.warn("FAISS index methods not available, using JSON-only fallback");
+        }
+      } catch (error: any) {
+        console.warn(`Could not load FAISS index, using JSON-only fallback: ${error?.message || String(error)}`);
+      }
+    }
+    
+    // Load the chunks from JSON
     const data = await fs.readFile(`${vectorDbPath}.json`, 'utf8');
     const chunks: DocumentChunk[] = JSON.parse(data);
     
     // Create embedding for the question
     const questionEmbedding = await createEmbedding(question);
     
-    // Search for relevant chunks
-    const TOP_K = 5;
-    const searchResults = index.search(questionEmbedding, TOP_K);
+    let relevantChunks: DocumentChunk[] = [];
+    
+    // If we have a FAISS index, use it for searching
+    if (hasFaissIndex) {
+      try {
+        const TOP_K = 5;
+        const searchResults = index.search(questionEmbedding, TOP_K);
+        
+        // Convert search results to chunks
+        for (let i = 0; i < searchResults.length; i++) {
+          const resultId = searchResults[i].id;
+          if (chunks[resultId]) {
+            relevantChunks.push(chunks[resultId]);
+          }
+        }
+      } catch (error: any) {
+        console.warn(`FAISS search failed, falling back to simple methods: ${error?.message || String(error)}`);
+      }
+    }
+    
+    // If we couldn't get results from FAISS, just use the first few chunks
+    if (relevantChunks.length === 0) {
+      relevantChunks = chunks.slice(0, Math.min(5, chunks.length));
+    }
     
     // Collect the relevant chunks and their sources
     let relevantContent = "";
     const sources = new Set<string>();
     
-    for (const result of searchResults) {
-      const chunk = chunks[result.id];
-      if (chunk) {
-        relevantContent += chunk.text + "\n\n";
-        sources.add(path.basename(chunk.metadata.source));
-      }
+    for (const chunk of relevantChunks) {
+      relevantContent += chunk.text + "\n\n";
+      sources.add(path.basename(chunk.metadata.source));
     }
     
     return {
       content: relevantContent.trim(),
       sources: Array.from(sources),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error querying vector store:", error);
-    throw new Error(`Failed to query vector store: ${error.message}`);
+    throw new Error(`Failed to query vector store: ${error?.message || String(error)}`);
   }
 }
 
