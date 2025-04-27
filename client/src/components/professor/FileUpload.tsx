@@ -63,39 +63,69 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setIsUploading(true);
     setError(null);
     
-    // Simulate upload progress
-    const mockUpload = () => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 10;
-        if (progress > 100) {
-          progress = 100;
-          clearInterval(interval);
-          
-          // Mock successful upload
-          setTimeout(() => {
-            const mockFile: UploadedFile = {
-              id: Math.random().toString(36).substring(2, 9),
-              name: file.name,
-              type: file.type,
+    // Upload the file
+    const uploadFile = () => {
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('courseId', courseId.toString());
+      
+      // Use XMLHttpRequest to track upload progress
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/professor/courses/' + courseId + '/materials', true);
+      
+      // Track upload progress
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.floor((event.loaded / event.total) * 100);
+          setUploadProgress(percentComplete);
+        }
+      };
+      
+      // Handle response
+      xhr.onload = () => {
+        if (xhr.status === 200 || xhr.status === 201) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            const uploadedFile: UploadedFile = {
+              id: response.id.toString(),
+              name: response.name,
+              type: response.type,
               size: file.size,
-              uploadDate: new Date(),
-              url: URL.createObjectURL(file),
+              uploadDate: new Date(response.uploadDate),
+              url: response.path,
             };
             
-            setUploadedFiles(prev => [...prev, mockFile]);
+            setUploadedFiles(prev => [...prev, uploadedFile]);
             setIsUploading(false);
             setUploadProgress(0);
-            onUploadSuccess?.(mockFile);
-          }, 500);
+            onUploadSuccess?.(uploadedFile);
+          } catch (error) {
+            setError('Error processing server response');
+            setIsUploading(false);
+            onUploadError?.('Error processing server response');
+          }
+        } else {
+          setError(`Upload failed: ${xhr.statusText}`);
+          setIsUploading(false);
+          onUploadError?.(`Upload failed: ${xhr.statusText}`);
         }
-        setUploadProgress(Math.floor(progress));
-      }, 300);
+      };
+      
+      // Handle error
+      xhr.onerror = () => {
+        setError('Network error occurred during upload');
+        setIsUploading(false);
+        onUploadError?.('Network error occurred during upload');
+      };
+      
+      // Start upload
+      xhr.send(formData);
     };
     
-    // Start mock upload after a short delay
-    setTimeout(mockUpload, 300);
-  }, [allowedFileTypes, maxFileSize, onUploadError, onUploadSuccess]);
+    // Start the upload process
+    uploadFile();
+  }, [allowedFileTypes, maxFileSize, onUploadError, onUploadSuccess, courseId, file]);
 
   // Handle drag events
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {

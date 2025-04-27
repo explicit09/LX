@@ -23,8 +23,8 @@ const CourseCard = ({ course, onChat, onViewMaterials }: CourseCardProps) => {
     }).format(date);
   };
 
-  // Generate random gradient for course card
-  const getRandomGradient = () => {
+  // Deterministic gradient based on course ID
+  const getGradientForCourse = (courseId: number) => {
     const gradients = [
       'from-blue-500 to-blue-400',
       'from-blue-600 to-indigo-500',
@@ -34,12 +34,13 @@ const CourseCard = ({ course, onChat, onViewMaterials }: CourseCardProps) => {
       'from-cyan-500 to-blue-400',
     ];
     
-    return gradients[Math.floor(Math.random() * gradients.length)];
+    // Use course ID to determine gradient (ensures consistent colors per course)
+    return gradients[courseId % gradients.length];
   };
 
   return (
     <Card className="overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full border border-gray-100">
-      <div className={`h-3 w-full bg-gradient-to-r ${getRandomGradient()}`}></div>
+      <div className={`h-3 w-full bg-gradient-to-r ${getGradientForCourse(course.id)}`}></div>
       
       <CardContent className="p-6 flex-1">
         <div className="flex items-start justify-between mb-4">
