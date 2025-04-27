@@ -1,44 +1,82 @@
-import React from 'react';
-import SidebarNav from './SidebarNav';
-import TopNav from './TopNav';
+import React, { ReactNode } from 'react';
+import { Link } from 'wouter';
+import { ChevronRight, Home } from 'lucide-react';
 
-interface CanvasLayoutProps {
-  children: React.ReactNode;
-  title?: string;
-  breadcrumbs?: Array<{
-    label: string;
-    path: string;
-  }>;
-  rightSidebar?: React.ReactNode;
+interface BreadcrumbItem {
+  label: string;
+  path: string;
 }
 
-const CanvasLayout: React.FC<CanvasLayoutProps> = ({ 
-  children, 
-  title = 'Dashboard',
-  breadcrumbs = [],
+interface CanvasLayoutProps {
+  title: string;
+  children: ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+  rightSidebar?: ReactNode;
+}
+
+const CanvasLayout: React.FC<CanvasLayoutProps> = ({
+  title,
+  children,
+  breadcrumbs,
   rightSidebar
 }) => {
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      {/* Sidebar Navigation */}
-      <SidebarNav />
-      
-      {/* Top Navigation */}
-      <TopNav title={title} breadcrumbs={breadcrumbs} />
-      
-      {/* Main Content */}
-      <div className={`pt-16 ${rightSidebar ? 'md:mr-80' : ''} ml-16 md:ml-64`}>
-        <main className="p-4 md:p-8 min-h-[calc(100vh-4rem)]">
-          {children}
-        </main>
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-neutral-50 dark:bg-neutral-900">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3">
+          {/* Breadcrumbs */}
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+              <Link href="/">
+                <a className="flex items-center hover:text-neutral-800 dark:hover:text-white">
+                  <Home className="h-3.5 w-3.5 mr-1" />
+                  Home
+                </a>
+              </Link>
+              
+              {breadcrumbs.map((crumb, index) => (
+                <React.Fragment key={index}>
+                  <ChevronRight className="h-3.5 w-3.5 mx-2" />
+                  {index === breadcrumbs.length - 1 ? (
+                    <span className="text-neutral-800 dark:text-white font-medium">
+                      {crumb.label}
+                    </span>
+                  ) : (
+                    <Link href={crumb.path}>
+                      <a className="hover:text-neutral-800 dark:hover:text-white">
+                        {crumb.label}
+                      </a>
+                    </Link>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+          
+          {/* Page Title */}
+          <h1 className="text-xl font-semibold text-neutral-800 dark:text-white">
+            {title}
+          </h1>
+        </div>
       </div>
       
-      {/* Right Sidebar (optional) */}
-      {rightSidebar && (
-        <aside className="fixed top-16 right-0 w-full md:w-80 bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 h-[calc(100vh-4rem)] p-4 overflow-auto hidden md:block">
-          {rightSidebar}
-        </aside>
-      )}
+      {/* Main Content */}
+      <div className="flex-1 flex">
+        {/* Main Content Area */}
+        <div className={`flex-1 p-4 md:p-6 ${rightSidebar ? 'lg:mr-80' : ''}`}>
+          <div className="max-w-screen-xl mx-auto">
+            {children}
+          </div>
+        </div>
+        
+        {/* Right Sidebar */}
+        {rightSidebar && (
+          <div className="hidden lg:block fixed right-0 top-16 bottom-0 w-80 bg-white dark:bg-neutral-800 border-l border-neutral-200 dark:border-neutral-700 overflow-y-auto p-4">
+            {rightSidebar}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

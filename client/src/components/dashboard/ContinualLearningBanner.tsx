@@ -1,56 +1,56 @@
 import React from 'react';
-import { BookOpen, AlertCircle, ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const ContinualLearningBanner = () => {
+  // Calculate randomized progress metrics for display purposes
+  const coursesInProgress = Math.floor(Math.random() * 3) + 1; // 1-3 courses
+  const completionPercentage = Math.floor(Math.random() * 85) + 10; // 10-95%
+  const timeSpentThisWeek = Math.floor(Math.random() * 10) + 2; // 2-12 hours
+  
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-lg p-4 mb-6 border border-blue-100 dark:border-blue-900">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full mr-3">
-            <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h3 className="font-medium text-blue-800 dark:text-blue-300">Continual Learning</h3>
-            <p className="text-sm text-blue-600 dark:text-blue-400">
-              Review these topics to strengthen your knowledge
-            </p>
-          </div>
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50 p-6 mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+        {/* Icon */}
+        <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+          <BookOpen className="h-6 w-6 text-blue-700 dark:text-blue-400" />
         </div>
-        <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm flex items-center">
-          View all
-          <ArrowRight className="ml-1 h-4 w-4" />
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-        <div className="bg-white dark:bg-neutral-800 rounded-md p-3 shadow-sm border border-blue-100 dark:border-blue-900">
-          <div className="flex items-start">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
-            <div className="ml-2">
-              <h4 className="font-medium text-sm text-neutral-800 dark:text-white">Leadership Ethics</h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Last reviewed 2 weeks ago</p>
+        
+        {/* Content */}
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-1">
+            Continue your learning journey
+          </h2>
+          <p className="text-neutral-600 dark:text-neutral-300 mb-4">
+            You have {coursesInProgress} course{coursesInProgress !== 1 ? 's' : ''} in progress. 
+            Complete the next module to maintain your {completionPercentage}% completion rate.
+          </p>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Courses in progress</p>
+              <p className="text-lg font-medium text-neutral-800 dark:text-white">{coursesInProgress}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Completion rate</p>
+              <p className="text-lg font-medium text-neutral-800 dark:text-white">{completionPercentage}%</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Time spent this week</p>
+              <p className="text-lg font-medium text-neutral-800 dark:text-white">{timeSpentThisWeek} hours</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-neutral-800 rounded-md p-3 shadow-sm border border-blue-100 dark:border-blue-900">
-          <div className="flex items-start">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
-            <div className="ml-2">
-              <h4 className="font-medium text-sm text-neutral-800 dark:text-white">Financial Analysis</h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Last reviewed 3 weeks ago</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-neutral-800 rounded-md p-3 shadow-sm border border-blue-100 dark:border-blue-900">
-          <div className="flex items-start">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
-            <div className="ml-2">
-              <h4 className="font-medium text-sm text-neutral-800 dark:text-white">Constitutional Law</h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Last reviewed 1 month ago</p>
-            </div>
-          </div>
+        {/* CTA */}
+        <div className="w-full md:w-auto flex">
+          <Button className="w-full md:w-auto" asChild>
+            <a href="#resume-learning" className="flex items-center">
+              Resume Learning
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
         </div>
       </div>
     </div>

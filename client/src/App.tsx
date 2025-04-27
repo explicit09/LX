@@ -1,9 +1,9 @@
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect, useState } from "react";
 import { useUser } from "./lib/user-context";
 
 // Import layout components
@@ -73,20 +73,20 @@ function Router() {
           
           {/* Course routes */}
           <Route path="/courses/:courseId/modules" component={() => {
-            const CourseModules = React.lazy(() => import('./pages/course/Modules'));
+            const CourseModules = lazy(() => import('./pages/course/Modules'));
             return (
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={<div>Loading...</div>}>
                 <CourseModules />
-              </React.Suspense>
+              </Suspense>
             );
           }} />
           
           <Route path="/courses/:courseId/modules/:moduleId/items/:itemId" component={() => {
-            const ModuleDetail = React.lazy(() => import('./pages/course/ModuleDetail'));
+            const ModuleDetail = lazy(() => import('./pages/course/ModuleDetail'));
             return (
-              <React.Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={<div>Loading...</div>}>
                 <ModuleDetail />
-              </React.Suspense>
+              </Suspense>
             );
           }} />
           

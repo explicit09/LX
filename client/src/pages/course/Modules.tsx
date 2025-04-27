@@ -31,22 +31,22 @@ const CourseModules = () => {
             {
               id: 101,
               title: 'Course Introduction',
-              type: 'video',
-              status: 'completed'
+              type: 'video' as const,
+              status: 'completed' as const
             },
             {
               id: 102,
               title: 'Syllabus & Course Expectations',
-              type: 'reading',
-              status: 'completed'
+              type: 'reading' as const,
+              status: 'completed' as const
             },
             {
               id: 103,
               title: 'Introduce Yourself Discussion',
-              type: 'assignment',
+              type: 'assignment' as const,
               dueDate: '2025-05-10T23:59:00',
               points: 5,
-              status: 'completed'
+              status: 'completed' as const
             }
           ]
         }
@@ -63,16 +63,16 @@ const CourseModules = () => {
             {
               id: 201,
               title: 'Reading: Chapter 1 - Foundations of Leadership',
-              type: 'reading',
-              status: 'in-progress'
+              type: 'reading' as const,
+              status: 'in-progress' as const
             },
             {
               id: 202,
               title: 'Knowledge Check 1.1',
-              type: 'quiz',
+              type: 'quiz' as const,
               dueDate: '2025-05-15T23:59:00',
               points: 10,
-              status: 'not-started'
+              status: 'not-started' as const
             }
           ]
         },
@@ -82,14 +82,14 @@ const CourseModules = () => {
             {
               id: 203,
               title: 'Lecture: Introduction to Leadership Styles',
-              type: 'video',
-              status: 'not-started'
+              type: 'video' as const,
+              status: 'not-started' as const
             },
             {
               id: 204,
               title: 'Case Study: Team Dynamics at TechCorp',
-              type: 'reading',
-              status: 'not-started'
+              type: 'reading' as const,
+              status: 'not-started' as const
             }
           ]
         },
@@ -99,10 +99,10 @@ const CourseModules = () => {
             {
               id: 205,
               title: 'Leadership Self-Assessment',
-              type: 'assignment',
+              type: 'assignment' as const,
               dueDate: '2025-05-20T23:59:00',
               points: 15,
-              status: 'not-started'
+              status: 'not-started' as const
             }
           ]
         }
@@ -119,22 +119,22 @@ const CourseModules = () => {
             {
               id: 301,
               title: 'Reading: Chapter 15 - Leadership Ethics',
-              type: 'reading',
-              status: 'not-started'
+              type: 'reading' as const,
+              status: 'not-started' as const
             },
             {
               id: 302,
               title: 'Knowledge Check 15.1',
-              type: 'quiz',
+              type: 'quiz' as const,
               dueDate: '2025-05-25T23:59:00',
               points: 10,
-              status: 'not-started'
+              status: 'not-started' as const
             },
             {
               id: 303,
               title: 'Preparation: Moral Vignettes',
-              type: 'reading',
-              status: 'not-started'
+              type: 'reading' as const,
+              status: 'not-started' as const
             }
           ]
         },
@@ -144,16 +144,16 @@ const CourseModules = () => {
             {
               id: 304,
               title: 'Study Guide 03 - Moral Reasoning (with video)',
-              type: 'video',
-              status: 'not-started'
+              type: 'video' as const,
+              status: 'not-started' as const
             },
             {
               id: 305,
               title: 'Discussion: Ethical Dilemmas in Leadership',
-              type: 'assignment',
+              type: 'assignment' as const,
               dueDate: '2025-05-27T23:59:00',
               points: 15,
-              status: 'not-started'
+              status: 'not-started' as const
             }
           ]
         }
