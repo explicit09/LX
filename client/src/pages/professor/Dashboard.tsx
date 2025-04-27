@@ -106,7 +106,8 @@ const ProfessorDashboard = () => {
     }
   };
   
-  if (!user) return null;
+  // For demo purposes, we'll render the UI even if user is null
+  // In a real app, we would redirect to login or show a message
   
   return (
     <CanvasLayout 
