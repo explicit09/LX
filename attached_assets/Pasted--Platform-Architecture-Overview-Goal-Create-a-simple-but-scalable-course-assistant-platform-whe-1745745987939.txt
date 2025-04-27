@@ -1,0 +1,70 @@
+🔍 Platform Architecture Overview
+✅ Goal:
+Create a simple but scalable course assistant platform where professors upload materials, and
+students use LLM-powered chat to interact with those materials securely.
+󰳓 Professor Flow:
+1. Account Creation: Professors create an account on the platform.
+2. Course Creation: Professors can create one or more courses.
+3. Access Code Generation: Upon course creation, a unique access code is generated.
+4. Inviting Students: Professors share this code with students to authorize enrollment.
+5. File Uploads:
+○
+Professors upload PDFs and audio files.
+○
+Each file is timestamped automatically during upload.
+○
+Files are organized in a course-specific database.
+6. Indexing:
+○
+○
+Each new file triggers regeneration of index.pkl, used for retrieval.
+This index is course-specific and enables document-level search via LLM.
+Example view in the professor dashboard:
+mathematica
+CopyEdit
+Monday 04/11/2025
+- Audio recording (transcribed)
+- Module 20.pdf
+Wednesday 04/13/2025
+- Audio recording (transcribed)
+- Module 21.pdf
+󰠈 Student Flow:
+1. Account Creation: Students create an account.
+2. Course Join: Students enter a course access code to join.
+3. LLM Chat Access:
+○
+They can chat with course content using an LLM API powered by:
+■
+index.pkl (from course materials)
+■ Persona DB (for guiding response style or tone)
+■ Prompt Engineering to avoid helping with homework or test answers
+4. Interaction Logging:
+○
+All student questions and interactions are logged.
+○
+These logs are later summarized into reports for professors (e.g., FAQs,
+confusion points).
+🔄 System Summary:
+●
+●
+●
+One index per course.
+Real-time ingestion of data and index updates.
+Secure access via invitation codes.
+●
+Summarized feedback loop for continuous improvement.
+🗂 Tech Stack Overview:
+●
+●
+●
+●
+Backend: Python (Flask/FastAPI)
+Frontend: React / Next.js
+LLM API: OpenAI / Local Model (LLama, etc.)
+Database: PostgreSQL / Firebase Firestore
+●
+●
+●
+Storage: Cloud Storage for PDFs/Audio
+Vector DB: FAISS for index.pkl
+Auth: Firebase Auth or custom JWT
