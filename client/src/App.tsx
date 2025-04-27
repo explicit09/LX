@@ -27,8 +27,8 @@ function Router() {
 
   useEffect(() => {
     if (!isLoading) {
-      // Redirect to auth if not logged in
-      if (!user && location !== "/auth") {
+      // Redirect to auth if not logged in and not on auth page
+      if (!user && location !== "/auth" && location !== "/") {
         setLocation("/auth");
       }
       
@@ -62,9 +62,9 @@ function Router() {
       {/* Root redirect */}
       <Route path="/">
         {() => {
-          const redirectPath = user?.role === "professor" 
-            ? "/professor/dashboard" 
-            : "/student/dashboard";
+          const redirectPath = user 
+            ? (user.role === "professor" ? "/professor/dashboard" : "/student/dashboard")
+            : "/auth";
           
           setLocation(redirectPath);
           return null;
