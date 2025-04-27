@@ -5,14 +5,14 @@ import { useEffect } from "react";
 
 const Auth = () => {
   const [, navigate] = useLocation();
-  const { user } = useUser();
+  const { user, navigateToDashboard } = useUser();
 
   useEffect(() => {
     // If user is already logged in, redirect to appropriate dashboard
     if (user) {
-      navigate(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
+      navigateToDashboard();
     }
-  }, [user, navigate]);
+  }, [user, navigateToDashboard]);
 
   const handleAuthSuccess = () => {
     // The user context will handle the redirect

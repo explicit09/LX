@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { User } from "./types";
 import { getCurrentUser, logoutUser } from "./auth";
+import { useLocation } from "wouter";
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   clearUser: () => Promise<void>;
   isLoading: boolean;
+  navigateToDashboard: () => void;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -14,11 +16,13 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   clearUser: async () => {},
   isLoading: true,
+  navigateToDashboard: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [, navigate] = useLocation();
 
   // Load user on mount and set up refresh interval
   useEffect(() => {
@@ -58,12 +62,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper function to navigate to the appropriate dashboard
+  const navigateToDashboard = useCallback(() => {
+    if (!user) return;
+    
+    const targetPath = user.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
+    console.log("Navigating to dashboard:", targetPath);
+    navigate(targetPath);
+  }, [user, navigate]);
+
   return (
     <UserContext.Provider value={{ 
       user, 
       setUser, 
       clearUser, 
-      isLoading
+      isLoading,
+      navigateToDashboard
     }}>
       {children}
     </UserContext.Provider>

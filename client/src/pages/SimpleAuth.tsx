@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SimpleAuth() {
   const [, navigate] = useLocation();
-  const { user, setUser } = useUser();
+  const { user, setUser, navigateToDashboard } = useUser();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,12 +93,8 @@ export default function SimpleAuth() {
         description: `Welcome back, ${userData.name || "user"}!`,
       });
       
-      // Manually perform navigation after a short delay to allow context to update
-      setTimeout(() => {
-        const targetPath = userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
-        console.log("Manual navigation to:", targetPath);
-        window.location.href = targetPath;
-      }, 500);
+      // Use navigateToDashboard from user context
+      navigateToDashboard();
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -164,12 +160,8 @@ export default function SimpleAuth() {
         description: `Welcome, ${userData.name}!`,
       });
       
-      // Manually perform navigation after a short delay to allow context to update
-      setTimeout(() => {
-        const targetPath = userData.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
-        console.log("Manual navigation to:", targetPath);
-        window.location.href = targetPath;
-      }, 500);
+      // Use navigateToDashboard from user context
+      navigateToDashboard();
     } catch (error) {
       console.error("Registration error:", error);
       toast({
@@ -185,9 +177,9 @@ export default function SimpleAuth() {
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
+      navigateToDashboard();
     }
-  }, [user, navigate]);
+  }, [user, navigateToDashboard]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 px-4">

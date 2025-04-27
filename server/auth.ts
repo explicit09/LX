@@ -40,7 +40,16 @@ export function setupAuth(app: Express) {
     }
   };
 
-  app.set("trust proxy", 1);
+  // Warn if using default session secret in production
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+    console.warn("WARNING: Using default session secret in production. Set SESSION_SECRET environment variable.");
+  }
+
+  // Only set trust proxy in production
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+  
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
