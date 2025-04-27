@@ -230,6 +230,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all materials for all courses taught by a professor
+  app.get("/api/professor/materials", isProfessor, async (req, res, next) => {
+    try {
+      const professorId = req.user!.id;
+      
+      // Get all courses for the professor
+      const courses = await storage.getProfessorCourses(professorId);
+      
+      if (courses.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get materials for each course
+      const courseIds = courses.map(course => course.id);
+      const allMaterials: any[] = [];
+      
+      for (const courseId of courseIds) {
+        const materials = await storage.getCourseMaterials(courseId);
+        
+        // Add course name to each material
+        const course = courses.find(c => c.id === courseId);
+        const enhancedMaterials = materials.map(material => ({
+          ...material,
+          courseName: course?.name || "Unknown Course"
+        }));
+        
+        allMaterials.push(...enhancedMaterials);
+      }
+      
+      res.json(allMaterials);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Get all students enrolled in a course
   app.get("/api/professor/courses/:id/students", isProfessor, async (req, res, next) => {
     try {
@@ -462,6 +497,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get analytics for a specific course
+  app.get("/api/professor/courses/:id/analytics", isProfessor, async (req, res, next) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      if (course.professorId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized to access this course" });
+      }
+      
+      // Get all students enrolled in the course
+      const students = await storage.getCourseStudents(courseId);
+      
+      if (students.length === 0) {
+        return res.json({
+          totalQuestions: 0,
+          averageQuestionsPerStudent: 0,
+          studentInteractions: [],
+          topQuestionsPerDay: 0,
+          questionsPerDay: [],
+          commonTopics: []
+        });
+      }
+      
+      // Get all chat history for all students in this course
+      const studentIds = students.map(student => student.id);
+      let allChatItems: any[] = [];
+      
+      for (const studentId of studentIds) {
+        const chatItems = await storage.getStudentChatHistory(studentId, courseId);
+        // Add student info to each chat item
+        const student = students.find(s => s.id === studentId);
+        const enhancedChatItems = chatItems.map(item => ({
+          ...item,
+          studentName: student?.name || "Unknown Student"
+        }));
+        
+        allChatItems = [...allChatItems, ...enhancedChatItems];
+      }
+      
+      // Calculate analytics
+      const totalQuestions = allChatItems.length;
+      const averageQuestionsPerStudent = totalQuestions / students.length;
+      
+      // Group questions by day
+      const questionsByDay = allChatItems.reduce((acc, item) => {
+        const date = new Date(item.timestamp).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const questionsPerDay = Object.entries(questionsByDay).map(([date, count]) => ({
+        date,
+        count
+      }));
+      
+      // Find the maximum questions per day
+      const topQuestionsPerDay = Math.max(...Object.values(questionsByDay), 0);
+      
+      // Extract common topics (basic implementation - could be improved with NLP)
+      // Here we're just counting common words in questions
+      const words = allChatItems
+        .map(item => item.question.toLowerCase())
+        .join(' ')
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/);
+      
+      const wordCounts = words.reduce((acc, word) => {
+        // Ignore common stop words
+        const stopWords = ['the', 'and', 'a', 'to', 'of', 'in', 'is', 'it', 'that', 'for', 'on', 'with', 'as', 'what', 'how', 'why'];
+        if (word.length > 3 && !stopWords.includes(word)) {
+          acc[word] = (acc[word] || 0) + 1;
+        }
+        return acc;
+      }, {});
+      
+      // Sort and get top words
+      const commonTopics = Object.entries(wordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([topic, count]) => ({ topic, count }));
+      
+      // Get interactions by student
+      const studentInteractions = students.map(student => {
+        const studentChatItems = allChatItems.filter(item => item.studentId === student.id);
+        
+        // Get topics per student
+        const studentWords = studentChatItems
+          .map(item => item.question.toLowerCase())
+          .join(' ')
+          .replace(/[^\w\s]/g, '')
+          .split(/\s+/);
+        
+        const studentWordCounts = studentWords.reduce((acc, word) => {
+          const stopWords = ['the', 'and', 'a', 'to', 'of', 'in', 'is', 'it', 'that', 'for', 'on', 'with', 'as', 'what', 'how', 'why'];
+          if (word.length > 3 && !stopWords.includes(word)) {
+            acc[word] = (acc[word] || 0) + 1;
+          }
+          return acc;
+        }, {});
+        
+        const studentTopics = Object.entries(studentWordCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([topic, count]) => ({ topic, count }));
+        
+        return {
+          studentId: student.id,
+          studentName: student.name,
+          questionCount: studentChatItems.length,
+          lastInteraction: studentChatItems.length > 0 
+            ? studentChatItems.sort((a, b) => 
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              )[0].timestamp
+            : null,
+          topics: studentTopics
+        };
+      }).sort((a, b) => b.questionCount - a.questionCount);
+      
+      res.json({
+        totalQuestions,
+        averageQuestionsPerStudent,
+        studentInteractions,
+        topQuestionsPerDay,
+        questionsPerDay,
+        commonTopics
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Demo endpoint for AI Tutor (publicly accessible)
   app.post("/api/demo/ask", async (req, res, next) => {
     try {

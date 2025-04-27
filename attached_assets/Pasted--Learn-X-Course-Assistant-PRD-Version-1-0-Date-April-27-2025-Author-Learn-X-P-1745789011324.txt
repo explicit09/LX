@@ -1,0 +1,118 @@
+# Learn‑X Course Assistant PRD  
+**Version:** 1.0  
+**Date:** April 27, 2025  
+**Author:** Learn‑X Product Team  
+
+---
+
+## 1. Purpose & Background  
+**Purpose:**  Deliver an in‑LMS, AI‑powered assistant that lets professors upload course materials and enables students to interact via chat directly with that content in a secure, course‑scoped environment.  
+
+**Background:**  A simple, scalable course assistant where:  
+- Professors ingest PDFs & audio, automatically timestamped and indexed per course.  
+- Students join via access code and chat with an LLM that retrieves answers from their course’s index.  
+- All interactions are logged and surfaced back to instructors as class‑wide insights.  
+
+---
+
+## 2. Objectives & Success Metrics
+
+| Objective                                        | Success Metric                                      |
+|--------------------------------------------------|-----------------------------------------------------|
+| **Secure, self‑serve professor onboarding**       | 90% of professors onboard without support tickets   |
+| **Accurate content ingestion & indexing**        | ≥ 95% of uploads appear in index within 2 minutes   |
+| **Engaging student chat experience**             | ≥ 80% positive feedback in beta surveys             |
+| **Actionable instructor insights**               | Professors receive weekly summaries of top‑3 FAQs   |
+| **Scalability**                                  | Support 50 concurrent courses without degradation   |
+
+---
+
+## 3. Stakeholders & Personas  
+- **Professor “Dr. Lee”**: Course creator & content curator; needs easy upload, enrollment, and analytics.  
+- **Student “Alex”**: End‑user consuming content; needs intuitive chat that understands module context.  
+- **Admin “Registrar”**: Oversees provisioning; needs visibility into usage and access controls.  
+
+---
+
+## 4. Scope & In‑Scope Features
+
+### 4.1 Professor Flow  
+1. **Account & Course Setup**  
+   - Professors register, verify email, and create/edit/delete courses.  
+2. **Access Code Generation & Enrollment**  
+   - System issues a unique, revocable code per course.  
+3. **Content Upload & Organization**  
+   - Upload PDFs & audio (max 100 MB); files auto‑timestamped and listed by date.  
+4. **Indexing**  
+   - Each upload enqueues re‑generation of the course’s retrieval index.  
+   - Display indexing status and last‑updated timestamp.  
+
+### 4.2 Student Flow  
+1. **Account Creation & Course Join**  
+   - Students register, verify email, and enter a valid access code.  
+2. **Interactive Chat**  
+   - Chat UI scoped to enrolled course index and persona settings.  
+   - Responses draw on: course index, student persona (tone/style), and prompt rules.  
+3. **Interaction Logging & Reporting**  
+   - Log all questions/responses (user, timestamp, course, Q&A text).  
+   - Weekly reports: top‑10 questions, common confusion points, unanswered queries.  
+
+### 4.3 System Summary  
+- **One index per course** for data isolation.  
+- **Real‑time ingestion & updates**: searchable within minutes.  
+- **Secure access**: invitation codes control enrollment.  
+- **Feedback loop**: summarized logs surface key student questions.  
+
+---
+
+## 5. Functional Requirements
+
+| ID    | Requirement                                                                                                    | Priority |
+|-------|----------------------------------------------------------------------------------------------------------------|----------|
+| FR‑01 | Professors can sign up, verify email, and manage courses.                                                      | High     |
+| FR‑02 | System generates a unique, revocable access code per course.                                                   | High     |
+| FR‑03 | Professors can upload PDF & audio with progress indicator and file‑type validation.                             | High     |
+| FR‑04 | Automatic timestamp capture and course‑scoped file listing.                                                     | Medium   |
+| FR‑05 | Indexing job enqueued on upload; status shown to professor.                                                    | High     |
+| FR‑06 | Students register, verify email, enroll via valid access code (with error handling).                           | High     |
+| FR‑07 | Chat UI bound to the course index; supports persona settings and conversation history.                         | High     |
+| FR‑08 | Prompt‑engineering rules to prevent direct homework/test answers.                                              | High     |
+| FR‑09 | Log interactions with user ID, timestamp, course ID, question, and response.                                  | High     |
+| FR‑10 | Weekly report generator: top‑asked questions, confusion topics, unanswered queries.                           | Medium   |
+| FR‑11 | Professors can view/download PDF of weekly summaries.                                                          | Medium   |
+| FR‑12 | Role‑based access control: only authorized roles can upload or view logs.                                      | High     |
+
+---
+
+## 6. Non‑Functional Requirements
+- **Performance:** Index refresh ≤ 5 min for 95% of files; chat responses ≤ 3 s end‑to‑end.  
+- **Scalability:** Handle 100 concurrent indexing jobs via horizontal scaling.  
+- **Reliability:** 99.5% uptime SLA for upload, chat, and reporting.  
+- **Security & Privacy:** Course data isolation; encryption at rest/in transit; expiring access codes.  
+- **Usability:** Onboarding < 5 min; chat UI meets WCAG 2.1 AA.  
+
+---
+
+## 7. Acceptance Criteria
+- **Professor Onboarding:** Create course → receive valid code → appear in dashboard.  
+- **Content Ingestion & Indexing:** Upload PDF → listed with timestamp → index status “complete” within 5 min.  
+- **Student Chat:** Enroll → ask content question → receive contextually accurate answer.  
+- **Reporting:** After ≥ 1 week, dashboard shows exportable “Top Confusion Points” report.  
+
+---
+
+## 8. Dependencies & Constraints
+- **Dependencies:** Email service; background job queue.  
+- **Constraints:** No external homework‑solving integrations; file size/type limits for index performance.  
+
+---
+
+## 9. Glossary
+- **Index:** Course‑specific retrieval index of uploaded content.  
+- **Access Code:** Alphanumeric string granting enrollment to a course.  
+- **Persona DB:** Profile guiding response tone/style per student.  
+
+---
+
+*End of PRD*
+
