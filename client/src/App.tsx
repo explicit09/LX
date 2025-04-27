@@ -45,14 +45,34 @@ function Router() {
     }
   }, [location]);
 
-  // Redirect to auth page if not logged in
+  // Redirect to auth page if not logged in and handle role-based access
   useEffect(() => {
     // List of public routes that don't require authentication
     const publicRoutes = ['/', '/auth', '/ai-tutor-demo'];
     
-    if (!user && !isLoading && !publicRoutes.includes(location)) {
-      // Redirect to auth page if trying to access protected routes
-      setLocation("/auth");
+    if (!isLoading) {
+      if (!user && !publicRoutes.includes(location)) {
+        // Redirect to auth page if trying to access protected routes
+        setLocation("/auth");
+      } else if (user) {
+        // Handle role-based redirections
+        const isProfessorRoute = location.startsWith('/professor');
+        const isStudentRoute = location.startsWith('/student');
+        
+        // Redirect if user is trying to access pages for the wrong role
+        if (isProfessorRoute && user.role !== 'professor') {
+          setLocation("/student/dashboard");
+        } else if (isStudentRoute && user.role !== 'student') {
+          setLocation("/professor/dashboard");
+        } else if (location === '/auth') {
+          // Redirect from auth page if already logged in
+          if (user.role === 'professor') {
+            setLocation("/professor/dashboard");
+          } else {
+            setLocation("/student/dashboard");
+          }
+        }
+      }
     }
   }, [user, isLoading, location, setLocation]);
 

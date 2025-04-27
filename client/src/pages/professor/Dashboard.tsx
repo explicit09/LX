@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/lib/user-context';
 import { Course } from '@/lib/types';
 import { useLocation } from 'wouter';
+import { ProtectedRoute } from '@/lib/protected-route';
 import CanvasLayout from '@/components/layout/CanvasLayout';
 import CourseCard from '@/components/course/CourseCard';
 import TodoList from '@/components/dashboard/TodoList';
@@ -24,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-const ProfessorDashboard = () => {
+const ProfessorDashboardContent = () => {
   const { user } = useUser();
   const { toast } = useToast();
   const [location, navigate] = useLocation();
@@ -304,6 +305,15 @@ const ProfessorDashboard = () => {
         </div>
       )}
     </CanvasLayout>
+  );
+};
+
+// Wrap the dashboard content with the protected route component
+const ProfessorDashboard = () => {
+  return (
+    <ProtectedRoute requiredRole="professor">
+      <ProfessorDashboardContent />
+    </ProtectedRoute>
   );
 };
 
