@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/uploads", express.static(path.join(process.cwd(), "uploads")));
   
   // Process sample document for testing (DEVELOPMENT ONLY)
-  app.post("/api/process-sample-document", isProfessor, async (req, res, next) => {
+  app.post("/api/process-sample-document", async (req, res, next) => {
     try {
       const { courseId } = req.body;
       
@@ -448,7 +448,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filePath = path.join(process.cwd(), "uploads", "leadership_ethics.txt");
       
       // Check if file exists
-      if (!fs.existsSync(filePath)) {
+      try {
+        await fs.access(filePath);
+      } catch (error) {
         return res.status(404).json({ message: "Sample document not found" });
       }
       
