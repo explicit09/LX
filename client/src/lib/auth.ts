@@ -72,26 +72,63 @@ export async function logoutUser(): Promise<void> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    // Get the current user from the API
-    try {
-      const response = await apiRequest("GET", "/api/user", undefined);
-      const user = await response.json();
-      if (user) {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-        return user;
+    // First check if we have a cached user in localStorage
+    const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+    let parsedUser: User | null = null;
+    
+    if (cachedUser) {
+      try {
+        parsedUser = JSON.parse(cachedUser) as User;
+        console.log("Found cached user:", parsedUser.username);
+      } catch (e) {
+        console.error("Failed to parse cached user:", e);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
       }
-    } catch (err) {
-      // If API call fails, just proceed with null
-      console.log("API call to get current user failed:", err);
-      // Clear localStorage if API call fails (user logged out)
-      localStorage.removeItem(AUTH_STORAGE_KEY);
     }
     
-    return null;
+    // Always verify with the server
+    try {
+      const response = await apiRequest("GET", "/api/user", undefined);
+      
+      // If unauthorized (401), clear cached user and return null
+      if (response.status === 401) {
+        console.log("Server reports user is not authenticated (401)");
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        return null;
+      }
+      
+      // If the request was successful, parse and return the user
+      if (response.ok) {
+        const serverUser = await response.json();
+        console.log("Server confirmed authenticated user:", serverUser.username);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(serverUser));
+        return serverUser;
+      }
+      
+      // For other error statuses
+      console.error("Unexpected status from /api/user:", response.status);
+      
+      // Fall back to cached user if we have one and not 401
+      if (parsedUser) {
+        console.log("Falling back to cached user due to server error");
+        return parsedUser;
+      }
+      
+      return null;
+    } catch (networkErr) {
+      console.error("Network error when fetching current user:", networkErr);
+      
+      // If offline/network error, use cached user if available
+      if (parsedUser) {
+        console.log("Network error, using cached user");
+        return parsedUser;
+      }
+      
+      return null;
+    }
   } catch (error) {
-    // If 401 or other auth error, just return null instead of throwing
-    console.log("Not authenticated or error fetching user:", error);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    // Catch any other errors
+    console.error("Unexpected error in getCurrentUser:", error);
     return null;
   }
 }

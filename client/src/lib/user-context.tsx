@@ -20,22 +20,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load user on mount and set up refresh interval
   useEffect(() => {
     const loadUser = async () => {
       try {
         setIsLoading(true);
         const currentUser = await getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-        }
+        setUser(currentUser); // Set to null if not authenticated
       } catch (error) {
         console.error("Error loading user:", error);
+        setUser(null); // Ensure user is set to null on error
       } finally {
         setIsLoading(false);
       }
     };
 
+    // Initial load
     loadUser();
+    
+    // Set up periodic refresh (every 3 minutes)
+    const refreshInterval = setInterval(() => {
+      console.log("Refreshing user authentication state...");
+      loadUser();
+    }, 180000); // 3 minutes
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const clearUser = async () => {

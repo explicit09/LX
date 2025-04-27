@@ -128,8 +128,21 @@ const ProfessorDashboard = () => {
     }
   };
   
-  // We should show a login prompt if user is not authenticated
+  // We should show a loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-neutral-300 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full mx-auto mb-4"></div>
+          <p className="text-neutral-600 dark:text-neutral-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // This check is technically redundant with ProtectedRoute but kept for extra safety
   if (!user) {
+    console.log("ProfessorDashboard - No user found");
     return (
       <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
         <div className="p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md max-w-md w-full text-center">
@@ -137,7 +150,7 @@ const ProfessorDashboard = () => {
           <p className="text-neutral-600 dark:text-neutral-400 mb-6">
             Please log in to access your professor dashboard.
           </p>
-          <Button onClick={() => navigate('/auth')}>
+          <Button onClick={() => window.location.href = '/auth'}>
             Go to Login
           </Button>
         </div>
