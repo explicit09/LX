@@ -71,6 +71,25 @@ function Router() {
           <Route path="/student/course/:id/materials" component={StudentCourseMaterials} />
           <Route path="/student/chat-history" component={StudentChatHistory} />
           
+          {/* Course routes */}
+          <Route path="/courses/:courseId/modules" component={() => {
+            const CourseModules = React.lazy(() => import('./pages/course/Modules'));
+            return (
+              <React.Suspense fallback={<div>Loading...</div>}>
+                <CourseModules />
+              </React.Suspense>
+            );
+          }} />
+          
+          <Route path="/courses/:courseId/modules/:moduleId/items/:itemId" component={() => {
+            const ModuleDetail = React.lazy(() => import('./pages/course/ModuleDetail'));
+            return (
+              <React.Suspense fallback={<div>Loading...</div>}>
+                <ModuleDetail />
+              </React.Suspense>
+            );
+          }} />
+          
           {/* Landing page - Use our new LandingPage component */}
           <Route path="/">
             <LandingPage />

@@ -1,312 +1,277 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
-import { Plus, Upload, BarChart } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-import TopNav from "@/components/layout/TopNav";
-import SideNav from "@/components/layout/SideNav";
-import CourseCard from "@/components/professor/CourseCard";
-import CreateCourseModal from "@/components/professor/CreateCourseModal";
-import UploadMaterialsModal from "@/components/professor/UploadMaterialsModal";
-import MaterialItem from "@/components/professor/MaterialItem";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Course, Material } from "@/lib/types";
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useUser } from '@/lib/user-context';
+import { Course } from '@/lib/types';
+import CanvasLayout from '@/components/layout/CanvasLayout';
+import CourseCard from '@/components/course/CourseCard';
+import TodoList from '@/components/dashboard/TodoList';
+import ContinualLearningBanner from '@/components/dashboard/ContinualLearningBanner';
+import { Button } from '@/components/ui/button';
+import { Search, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 const ProfessorDashboard = () => {
-  const [, navigate] = useLocation();
+  const { user } = useUser();
   const { toast } = useToast();
-  const [createCourseModalOpen, setCreateCourseModalOpen] = useState(false);
-  const [uploadMaterialsModalOpen, setUploadMaterialsModalOpen] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>();
-
-  // Mock courses data for demo
-  const [courses, setCourses] = useState<Course[]>([
-    {
-      id: 1,
-      name: "Introduction to Computer Science",
-      description: "Learn the fundamentals of computer science and programming",
-      accessCode: "CS101",
-      professorId: 1,
-      createdAt: new Date().toISOString(),
-      studentCount: 24,
-      materialCount: 5
-    },
-    {
-      id: 2,
-      name: "Advanced Machine Learning",
-      description: "Deep dive into neural networks and reinforcement learning",
-      accessCode: "ML202",
-      professorId: 1,
-      createdAt: new Date().toISOString(),
-      studentCount: 18,
-      materialCount: 12
-    }
-  ]);
-  const coursesLoading = false;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCourse, setNewCourse] = useState({
+    name: '',
+    description: '',
+    accessCode: generateRandomCode()
+  });
   
-  // Function to add a new course to our mock data
-  const refetchCourses = () => {
-    // In a real app, this would fetch data from the server
-    // For demo, we'll simulate a new course being added when creating a course
-    const courseAdded = localStorage.getItem('course_added');
-    if (courseAdded) {
-      try {
-        const newCourse = JSON.parse(courseAdded);
-        // Check if course already exists in our list
-        const exists = courses.some(c => c.id === newCourse.id);
-        if (!exists) {
-          setCourses(prev => [...prev, newCourse]);
-        }
-        localStorage.removeItem('course_added');
-      } catch (e) {
-        console.error("Error parsing new course data", e);
-      }
+  // Fetch professor's courses
+  const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
+    queryKey: ['/api/professor/courses'],
+    enabled: !!user,
+  });
+  
+  // Generate a random access code
+  function generateRandomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return code;
+  }
+  
+  // Filter courses based on search term
+  const filteredCourses = courses.filter(course => 
+    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  // Handle input changes for new course form
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewCourse(prev => ({ ...prev, [name]: value }));
   };
   
-  // Check for new courses when component mounts
-  useEffect(() => {
-    refetchCourses();
-  }, []);
-
-  // Mock materials data for demo
-  const [recentMaterials, setRecentMaterials] = useState<Material[]>([
-    {
-      id: 1,
-      courseId: 1,
-      name: "Introduction to Algorithms.pdf",
-      type: "pdf",
-      path: "/uploads/pdfs/intro-algorithms.pdf",
-      uploadDate: new Date().toISOString()
-    },
-    {
-      id: 2,
-      courseId: 1,
-      name: "Lecture 1 - Programming Basics.mp3",
-      type: "audio",
-      path: "/uploads/audio/lecture-1.mp3",
-      uploadDate: new Date().toISOString()
+  // Handle create course
+  const handleCreateCourse = async () => {
+    if (!newCourse.name) {
+      toast({
+        title: 'Missing information',
+        description: 'Please provide a course name',
+        variant: 'destructive'
+      });
+      return;
     }
-  ]);
-  const materialsLoading = false;
-  
-  // Function to handle adding new materials (from mock upload)
-  const refetchMaterials = () => {
-    // In a real app, this would fetch updated materials from the server
-    // For demo, we'll check if there are materials added via local storage
-    const materialsAdded = localStorage.getItem('materials_added');
-    if (materialsAdded) {
-      try {
-        const newMaterials = JSON.parse(materialsAdded) as Material[];
-        if (Array.isArray(newMaterials) && newMaterials.length > 0) {
-          // Filter to ensure we don't add duplicates
-          const newIds = new Set(newMaterials.map(m => m.id));
-          const existingMaterials = recentMaterials.filter(m => !newIds.has(m.id));
-          setRecentMaterials([...existingMaterials, ...newMaterials]);
-        }
-        localStorage.removeItem('materials_added');
-      } catch (e) {
-        console.error("Error parsing new materials data", e);
-      }
-    }
-  };
-  
-  // Check for new materials when component mounts
-  useEffect(() => {
-    refetchMaterials();
-  }, []);
-
-  const handleCreateCourse = () => {
-    setCreateCourseModalOpen(true);
-  };
-
-  const handleUploadMaterials = (courseId?: number) => {
-    setSelectedCourseId(courseId);
-    setUploadMaterialsModalOpen(true);
-  };
-
-  const handleViewMaterial = (material: Material) => {
-    // Implement viewing a material - extract filename from path
-    const filename = material.path.split('/').pop();
-    window.open(`/api/uploads/${material.type}/${filename}`, "_blank");
-  };
-
-  const handleDeleteMaterial = (material: Material) => {
-    // Implement deleting a material
-    toast({
-      title: "Not implemented",
-      description: "Material deletion is not yet implemented.",
-    });
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <TopNav />
+    
+    try {
+      setIsCreating(true);
       
-      <div className="flex-1 flex dashboard-content">
-        <SideNav />
-        
-        <main className="flex-1 overflow-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your Dashboard</h1>
-            <p className="text-gray-600">Manage your courses and materials from this dashboard.</p>
+      await apiRequest('POST', '/api/professor/courses', newCourse);
+      
+      toast({
+        title: 'Course created',
+        description: `${newCourse.name} has been created successfully`,
+      });
+      
+      // Reset form and close dialog
+      setNewCourse({
+        name: '',
+        description: '',
+        accessCode: generateRandomCode()
+      });
+      setIsCreateDialogOpen(false);
+      
+      // Refetch courses to update the list
+      refetch();
+    } catch (error) {
+      console.error('Failed to create course:', error);
+      toast({
+        title: 'Failed to create course',
+        description: 'An error occurred while creating the course',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+  
+  if (!user) return null;
+  
+  return (
+    <CanvasLayout 
+      title="Dashboard" 
+      rightSidebar={<TodoList />}
+    >
+      {/* Continual Learning Banner */}
+      <ContinualLearningBanner />
+      
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-neutral-400" />
           </div>
-          
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Create Course Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Create Course</h3>
-                  <Plus className="text-primary h-5 w-5" />
-                </div>
-                <p className="text-gray-600 text-sm mb-4">
-                  Create a new course and generate access codes for your students.
-                </p>
-                <Button 
-                  onClick={handleCreateCourse}
-                  className="w-full"
-                >
-                  Create New Course
-                </Button>
-              </CardContent>
-            </Card>
-            
-            {/* Upload Materials Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Upload Materials</h3>
-                  <Upload className="text-primary h-5 w-5" />
-                </div>
-                <p className="text-gray-600 text-sm mb-4">
-                  Upload new PDFs or audio files to your existing courses.
-                </p>
-                <Button 
-                  onClick={() => handleUploadMaterials()}
-                  className="w-full"
-                >
-                  Upload Materials
-                </Button>
-              </CardContent>
-            </Card>
-            
-            {/* View Reports Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Student Reports</h3>
-                  <BarChart className="text-primary h-5 w-5" />
-                </div>
-                <p className="text-gray-600 text-sm mb-4">
-                  View reports and analytics on student interactions with course materials.
-                </p>
-                <Button 
-                  onClick={() => navigate("/professor/reports")}
-                  className="w-full"
-                >
-                  View Reports
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Course List */}
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-medium text-gray-900">Your Courses</h2>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">Sort by:</span>
-                  <select className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50">
-                    <option>Recent</option>
-                    <option>Name</option>
-                    <option>Students</option>
-                  </select>
-                </div>
-              </div>
-              
-              {coursesLoading ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-500">Loading courses...</p>
-                </div>
-              ) : courses.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 mb-4">You haven't created any courses yet.</p>
-                  <Button onClick={handleCreateCourse}>Create Your First Course</Button>
-                </div>
-              ) : (
-                courses.map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    onManage={(id) => navigate(`/professor/courses/${id}`)}
-                    onUpload={(id) => handleUploadMaterials(id)}
-                    onReports={(id) => navigate(`/professor/reports/${id}`)}
+          <Input
+            className="pl-10"
+            placeholder="Search courses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">All Courses</Button>
+          <Button variant="outline">Current</Button>
+          <Button variant="outline">Past</Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Course
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Create New Course</DialogTitle>
+                <DialogDescription>
+                  Enter the details for your new course. Students will use the access code to enroll.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={newCourse.name}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    placeholder="e.g. Introduction to Economics"
                   />
-                ))
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Recent Materials */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-medium text-gray-900">Recent Materials</h2>
-                <Link to="/professor/materials">
-                  <span className="text-primary hover:underline text-sm font-medium cursor-pointer">View All</span>
-                </Link>
-              </div>
-              
-              {materialsLoading ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-500">Loading materials...</p>
                 </div>
-              ) : recentMaterials.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 mb-4">You haven't uploaded any materials yet.</p>
-                  <Button onClick={() => handleUploadMaterials()}>Upload Your First Material</Button>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="description" className="text-right">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={newCourse.description}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    placeholder="A brief description of the course..."
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentMaterials.map(material => (
-                    <MaterialItem
-                      key={material.id}
-                      material={material}
-                      onView={handleViewMaterial}
-                      onDelete={handleDeleteMaterial}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="accessCode" className="text-right">
+                    Access Code
+                  </Label>
+                  <div className="col-span-3 flex gap-2">
+                    <Input
+                      id="accessCode"
+                      name="accessCode"
+                      value={newCourse.accessCode}
+                      onChange={handleInputChange}
+                      placeholder="e.g. ABC123"
                     />
-                  ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setNewCourse(prev => ({ ...prev, accessCode: generateRandomCode() }))}
+                    >
+                      Generate
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </main>
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  disabled={isCreating}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={handleCreateCourse}
+                  disabled={isCreating}
+                >
+                  {isCreating ? 'Creating...' : 'Create Course'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
-      {/* Modals */}
-      <CreateCourseModal 
-        open={createCourseModalOpen}
-        onOpenChange={setCreateCourseModalOpen}
-        onCourseCreated={() => refetchCourses()}
-      />
-      
-      <UploadMaterialsModal
-        open={uploadMaterialsModalOpen}
-        onOpenChange={setUploadMaterialsModalOpen}
-        preselectedCourseId={selectedCourseId}
-        onUploadComplete={() => {
-          refetchCourses();
-          refetchMaterials();
-        }}
-      />
-    </div>
+      {/* Courses Grid */}
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin h-8 w-8 border-4 border-neutral-300 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full mx-auto"></div>
+          <p className="mt-4 text-neutral-600 dark:text-neutral-400">Loading your courses...</p>
+        </div>
+      ) : filteredCourses.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <CourseCard 
+              key={course.id} 
+              course={course} 
+              newItems={Math.floor(Math.random() * 4)} // Random number for demo
+            />
+          ))}
+          
+          {/* Create Course Card */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden h-full flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors">
+                <div className="h-12 w-12 rounded-full bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center mb-4">
+                  <Plus className="h-6 w-6 text-neutral-500 dark:text-neutral-400" />
+                </div>
+                <h3 className="font-medium text-neutral-800 dark:text-white text-base mb-2">
+                  Create New Course
+                </h3>
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm text-center">
+                  Set up a new course for your students
+                </p>
+              </div>
+            </DialogTrigger>
+          </Dialog>
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
+          <h3 className="font-medium text-neutral-800 dark:text-white text-lg mb-2">
+            No courses found
+          </h3>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            {searchTerm ? 'Try searching with different keywords' : 'You haven\'t created any courses yet'}
+          </p>
+          {!searchTerm && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Course
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          )}
+        </div>
+      )}
+    </CanvasLayout>
   );
 };
 
