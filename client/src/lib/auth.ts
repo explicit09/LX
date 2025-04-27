@@ -7,7 +7,7 @@ const AUTH_STORAGE_KEY = 'learnx_user';
 /**
  * Authenticates a user with the provided credentials
  */
-export async function loginUser(username: string, password: string, role: "professor" | "student"): Promise<User> {
+export async function loginUser(username: string, password: string): Promise<User> {
   try {
     const response = await apiRequest("POST", "/api/login", {
       username,
@@ -72,12 +72,6 @@ export async function logoutUser(): Promise<void> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    // Try to get from local storage first
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored) as User;
-    }
-    
     // Get the current user from the API
     try {
       const response = await apiRequest("GET", "/api/user", undefined);
@@ -89,33 +83,15 @@ export async function getCurrentUser(): Promise<User | null> {
     } catch (err) {
       // If API call fails, just proceed with null
       console.log("API call to get current user failed:", err);
+      // Clear localStorage if API call fails (user logged out)
+      localStorage.removeItem(AUTH_STORAGE_KEY);
     }
     
     return null;
   } catch (error) {
     // If 401 or other auth error, just return null instead of throwing
     console.log("Not authenticated or error fetching user:", error);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
-}
-
-/**
- * For demo purposes, create a demo user without hitting the backend
- */
-export function createDemoUser(role: "professor" | "student" = "professor"): User {
-  // Create a local user for demo purposes
-  const dummyId = Math.floor(Math.random() * 1000);
-    
-  const user: User = {
-    id: dummyId,
-    username: role === "professor" ? `prof${dummyId}` : `student${dummyId}`,
-    name: role === "professor" ? "Dr. Michael Chen" : "Alex Johnson",
-    role: role,
-    createdAt: new Date().toISOString()
-  };
-  
-  // Save to local storage
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-  
-  return user;
 }

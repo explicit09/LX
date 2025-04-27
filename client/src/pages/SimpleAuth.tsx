@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@/lib/user-context";
 import { apiRequest } from "@/lib/queryClient";
@@ -49,10 +49,9 @@ export default function SimpleAuth() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("POST", "/api/auth/login", {
+      const response = await apiRequest("POST", "/api/login", {
         username: formState.username,
-        password: formState.password,
-        role: formState.role
+        password: formState.password
       });
       
       const userData = await response.json();
@@ -91,7 +90,7 @@ export default function SimpleAuth() {
     try {
       setIsSubmitting(true);
       
-      const response = await apiRequest("POST", "/api/auth/register", {
+      const response = await apiRequest("POST", "/api/register", {
         name: formState.name,
         username: formState.username,
         password: formState.password,
@@ -120,29 +119,30 @@ export default function SimpleAuth() {
   };
 
   // Redirect if user is already logged in
-  if (user) {
-    navigate(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === "professor" ? "/professor/dashboard" : "/student/dashboard");
+    }
+  }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">EduQuest</h1>
-          <p className="text-gray-600">Course Assistant Platform</p>
+          <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-neutral-800 to-black dark:from-neutral-200 dark:to-white">LEARN-X</h1>
+          <p className="text-neutral-600 dark:text-neutral-400">Course Assistant Platform</p>
         </div>
         
-        <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="bg-white dark:bg-neutral-800 shadow-md rounded-lg p-6">
           {/* Tab Navigation */}
-          <div className="flex border-b border-gray-200 mb-6">
+          <div className="flex border-b border-neutral-200 dark:border-neutral-700 mb-6">
             <button
               type="button"
               onClick={() => setIsLogin(true)}
               className={`px-4 py-2 font-medium ${
                 isLogin
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-gray-500"
+                  ? "text-black dark:text-white border-b-2 border-black dark:border-white"
+                  : "text-neutral-500 dark:text-neutral-400"
               }`}
             >
               Login
@@ -152,8 +152,8 @@ export default function SimpleAuth() {
               onClick={() => setIsLogin(false)}
               className={`px-4 py-2 font-medium ${
                 !isLogin
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-gray-500"
+                  ? "text-black dark:text-white border-b-2 border-black dark:border-white"
+                  : "text-neutral-500 dark:text-neutral-400"
               }`}
             >
               Register

@@ -29,7 +29,7 @@ import StudentCourseMaterials from "@/pages/student/CourseMaterials";
 import StudentChatHistory from "@/pages/student/ChatHistory";
 
 function Router() {
-  const { user, isLoading, createDummyUser } = useUser();
+  const { user, isLoading } = useUser();
   const [location, setLocation] = useLocation();
   const [showNavbar, setShowNavbar] = useState(false);
 
@@ -39,18 +39,13 @@ function Router() {
     setShowNavbar(!noNavbarRoutes.includes(location));
   }, [location]);
 
-  // Create demo user for easier testing if needed
+  // Redirect to auth page if not logged in
   useEffect(() => {
     if (!user && !isLoading && location !== "/" && location !== "/auth") {
-      // If URL contains 'student', create a student account
-      if (location.includes('student')) {
-        createDummyUser("student");
-      } else {
-        // Default to professor for other routes
-        createDummyUser("professor");
-      }
+      // Redirect to auth page if trying to access protected routes
+      setLocation("/auth");
     }
-  }, [user, isLoading, location, setLocation, createDummyUser]);
+  }, [user, isLoading, location, setLocation]);
 
   return (
     <div className="min-h-screen flex flex-col">

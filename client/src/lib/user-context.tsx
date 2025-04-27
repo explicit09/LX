@@ -1,21 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "./types";
-import { getCurrentUser, createDemoUser } from "./auth";
+import { getCurrentUser, logoutUser } from "./auth";
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  clearUser: () => void;
+  clearUser: () => Promise<void>;
   isLoading: boolean;
-  createDummyUser: (role: "professor" | "student") => User;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   setUser: () => {},
-  clearUser: () => {},
+  clearUser: async () => {},
   isLoading: true,
-  createDummyUser: () => ({} as User),
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -40,16 +38,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const clearUser = () => {
-    localStorage.removeItem('eduquest_user');
-    setUser(null);
-  };
-  
-  // Create a dummy user for testing without hitting the backend
-  const createDummyUser = (role: "professor" | "student" = "professor"): User => {
-    const dummyUser = createDemoUser(role);
-    setUser(dummyUser);
-    return dummyUser;
+  const clearUser = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
   };
 
   return (
@@ -57,8 +52,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       user, 
       setUser, 
       clearUser, 
-      isLoading,
-      createDummyUser
+      isLoading
     }}>
       {children}
     </UserContext.Provider>
