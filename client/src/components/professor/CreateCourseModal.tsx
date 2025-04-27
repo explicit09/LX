@@ -74,30 +74,12 @@ const CreateCourseModal = ({
     try {
       setIsSubmitting(true);
       
-      // For demo purposes - simulate API request delay 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, uncomment this API call
-      // await apiRequest("POST", "/api/courses", {
-      //   ...values,
-      //   startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-      // });
-      
-      // Create a mock course object with the form values
-      const newCourse = {
-        id: Date.now(), // Use timestamp as a more reliable unique ID
-        name: values.name,
-        description: values.description || "",
+      // Send API request to create course
+      await apiRequest("POST", "/api/professor/courses", {
+        ...values,
         accessCode: generateAccessCode(values.name),
-        professorId: 1, // Current user ID
-        createdAt: new Date().toISOString(),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-        studentCount: 0,
-        materialCount: 0
-      };
-      
-      // Store in localStorage for the dashboard to pick up
-      localStorage.setItem('course_added', JSON.stringify(newCourse));
+      });
       
       toast({
         title: "Course created",

@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Link } from 'wouter';
-import { BookOpen, CheckCircle, FileText, Clock, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'wouter';
+import { BookOpen, CheckCircle, FileText, Clock, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/lib/user-context';
 
 // Todo item types
 interface TodoItem {
@@ -23,53 +26,60 @@ interface TodoListProps {
 }
 
 const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
-  // Example items for demo (in a real app, these would come from props or an API)
-  const defaultItems: TodoItem[] = [
-    {
-      id: 1,
-      title: 'Leadership Self-Assessment',
-      dueDate: '2025-05-20T23:59:00',
-      courseId: 101,
-      courseName: 'Introduction to Leadership',
-      type: 'assignment',
-      completed: false
-    },
-    {
-      id: 2,
-      title: 'Knowledge Check 1.1',
-      dueDate: '2025-05-15T23:59:00',
-      courseId: 101,
-      courseName: 'Introduction to Leadership',
-      type: 'quiz',
-      completed: false
-    },
-    {
-      id: 3,
-      title: 'Chapter 15 - Leadership Ethics',
-      dueDate: '2025-05-10T23:59:00',
-      courseId: 102,
-      courseName: 'Ethics in Modern Organizations',
-      type: 'reading',
-      completed: true
-    },
-    {
-      id: 4,
-      title: 'Discussion: Ethical Dilemmas',
-      dueDate: '2025-05-27T23:59:00',
-      courseId: 102,
-      courseName: 'Ethics in Modern Organizations',
-      type: 'assignment',
-      completed: false
-    }
-  ];
-  
-  const [items, setItems] = useState<TodoItem[]>(propItems || defaultItems);
+  const { user } = useUser();
+  const [location, navigate] = useLocation();
+  const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | 'incomplete' | 'complete'>('all');
+  
+  // Fetch todo items from the API
+  const { data: items = [], isLoading, refetch } = useQuery<TodoItem[]>({
+    queryKey: ['/api/todo'],
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: propItems || []
+  });
+  
+  // Update todo item completion status mutation
+  const updateTodoMutation = useMutation({
+    mutationFn: async ({ id, completed }: { id: number, completed: boolean }) => {
+      const response = await fetch(`/api/todo/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update todo item');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/todo'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update todo item',
+        variant: 'destructive'
+      });
+    }
+  });
   
   // Toggle item completion
   const toggleComplete = (id: number) => {
-    setItems(prev => 
-      prev.map(item => 
+    const item = items.find(item => item.id === id);
+    if (!item) return;
+    
+    // Call the mutation to update the todo item
+    updateTodoMutation.mutate({ 
+      id, 
+      completed: !item.completed 
+    });
+    
+    // Optimistically update the UI while the mutation is in flight
+    queryClient.setQueryData(['/api/todo'], (oldData: TodoItem[] = []) => 
+      oldData.map(item => 
         item.id === id ? { ...item, completed: !item.completed } : item
       )
     );
@@ -122,7 +132,12 @@ const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
       
       {/* Todo Items */}
       <div className="space-y-3 flex-1 overflow-auto">
-        {sortedItems.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <RefreshCw className="h-5 w-5 text-neutral-400 dark:text-neutral-500 animate-spin mb-2" />
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">Loading tasks...</p>
+          </div>
+        ) : sortedItems.length > 0 ? (
           sortedItems.map((item) => {
             const dueDate = new Date(item.dueDate);
             const isOverdue = !item.completed && dueDate < new Date();
@@ -154,12 +169,9 @@ const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
                   <div className="flex flex-col">
                     <div className="flex items-center mb-1">
                       {getItemIcon(item.type)}
-                      <span 
-                        className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate cursor-pointer"
-                        onClick={() => window.location.href = `/courses/${item.courseId}`}
-                      >
+                      <Link to={`/courses/${item.courseId}`} className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate">
                         {item.courseName}
-                      </span>
+                      </Link>
                     </div>
                     
                     <label
@@ -206,7 +218,7 @@ const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
         <Button 
           variant="outline" 
           className="w-full flex justify-center items-center"
-          onClick={() => window.location.href = '/todo'}
+          onClick={() => navigate('/todo')}
         >
           View All Tasks
           <ChevronRight className="ml-1 h-4 w-4" />
