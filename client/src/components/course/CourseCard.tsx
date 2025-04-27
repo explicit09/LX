@@ -8,18 +8,26 @@ import { Badge } from '@/components/ui/badge';
 interface CourseCardProps {
   course: Course;
   newItems?: number;
+  isProfessor?: boolean;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0 }) => {
+const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0, isProfessor = false }) => {
   // Format date for display
   const formattedDate = course.startDate 
     ? formatDistanceToNow(new Date(course.startDate), { addSuffix: true })
     : formatDistanceToNow(new Date(course.createdAt), { addSuffix: true });
   
+  // Prevent event bubbling to parent div for links
+  const handleLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   return (
     <div 
       className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden h-full flex flex-col hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors cursor-pointer"
-      onClick={() => window.location.href = `/courses/${course.id}/modules`}
+      onClick={() => window.location.href = isProfessor 
+        ? `/professor/courses/${course.id}` 
+        : `/courses/${course.id}/modules`}
     >
       {/* Card Header */}
       <div className="p-5 border-b border-neutral-200 dark:border-neutral-700">
@@ -74,11 +82,34 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0 }) => {
       </div>
       
       {/* Card Footer */}
-      <div className="p-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200 dark:border-neutral-700 text-center">
-        <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center">
-          View Course
-          <ChevronRight className="ml-1 h-4 w-4" />
-        </span>
+      <div className="p-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200 dark:border-neutral-700">
+        {isProfessor ? (
+          <div className="flex justify-between items-center">
+            <Link 
+              href={`/professor/courses/${course.id}`}
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center"
+              onClick={handleLinkClick}
+            >
+              View Course
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+            <Link 
+              href={`/professor/courses/${course.id}/analytics`}
+              className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center"
+              onClick={handleLinkClick}
+            >
+              Analytics
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="text-center">
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center">
+              View Course
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
