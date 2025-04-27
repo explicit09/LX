@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useUser } from "./lib/user-context";
 
 // Import pages
-import Auth from "@/pages/Auth";
+import SimpleAuth from "@/pages/SimpleAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 
@@ -55,7 +55,7 @@ function Router() {
   return (
     <Switch>
       {/* Auth route */}
-      <Route path="/auth" component={Auth} />
+      <Route path="/auth" component={SimpleAuth} />
       
       {/* Professor routes */}
       <Route path="/professor/dashboard" component={ProfessorDashboard} />
