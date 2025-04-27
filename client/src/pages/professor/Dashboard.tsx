@@ -35,11 +35,51 @@ const ProfessorDashboard = () => {
     accessCode: generateRandomCode()
   });
   
-  // Fetch professor's courses
-  const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
+  // Demo courses data for testing
+  const demoCourses: Course[] = [
+    {
+      id: 1,
+      name: "Introduction to Leadership",
+      description: "A foundation course exploring leadership theories and application",
+      accessCode: "LEAD101",
+      professorId: 1,
+      createdAt: "2025-01-15T12:00:00Z",
+      startDate: "2025-02-01T00:00:00Z",
+      studentCount: 24,
+      materialCount: 12
+    },
+    {
+      id: 2,
+      name: "Ethics in Modern Organizations",
+      description: "Ethical frameworks and case studies in organizational settings",
+      accessCode: "ETH202",
+      professorId: 2,
+      createdAt: "2025-01-20T14:30:00Z",
+      startDate: "2025-02-10T00:00:00Z",
+      studentCount: 18,
+      materialCount: 9
+    },
+    {
+      id: 3,
+      name: "Data-Driven Decision Making",
+      description: "Using data and analytics to inform business decisions",
+      accessCode: "DATA303",
+      professorId: 1,
+      createdAt: "2025-01-25T09:45:00Z",
+      startDate: "2025-02-15T00:00:00Z",
+      studentCount: 32,
+      materialCount: 15
+    }
+  ];
+  
+  // Fetch professor's courses (using demo data for now)
+  const { data: apiCourses = [], isLoading, refetch } = useQuery<Course[]>({
     queryKey: ['/api/professor/courses'],
     enabled: !!user,
   });
+  
+  // Use demo courses for display
+  const courses = apiCourses.length > 0 ? apiCourses : demoCourses;
   
   // Generate a random access code
   function generateRandomCode() {

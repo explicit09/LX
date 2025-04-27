@@ -154,11 +154,12 @@ const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
                   <div className="flex flex-col">
                     <div className="flex items-center mb-1">
                       {getItemIcon(item.type)}
-                      <Link href={`/courses/${item.courseId}`}>
-                        <a className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate">
-                          {item.courseName}
-                        </a>
-                      </Link>
+                      <span 
+                        className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate cursor-pointer"
+                        onClick={() => window.location.href = `/courses/${item.courseId}`}
+                      >
+                        {item.courseName}
+                      </span>
                     </div>
                     
                     <label
@@ -202,13 +203,13 @@ const TodoList: React.FC<TodoListProps> = ({ items: propItems }) => {
       
       {/* View All Link */}
       <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-        <Button variant="outline" className="w-full" asChild>
-          <Link href="/todo">
-            <a className="flex justify-center items-center">
-              View All Tasks
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </a>
-          </Link>
+        <Button 
+          variant="outline" 
+          className="w-full flex justify-center items-center"
+          onClick={() => window.location.href = '/todo'}
+        >
+          View All Tasks
+          <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
     </div>

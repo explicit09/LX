@@ -45,11 +45,12 @@ const ContinualLearningBanner = () => {
         
         {/* CTA */}
         <div className="w-full md:w-auto flex">
-          <Button className="w-full md:w-auto" asChild>
-            <a href="#resume-learning" className="flex items-center">
-              Resume Learning
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+          <Button 
+            className="w-full md:w-auto flex items-center"
+            onClick={() => window.location.href = '#resume-learning'}
+          >
+            Resume Learning
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>

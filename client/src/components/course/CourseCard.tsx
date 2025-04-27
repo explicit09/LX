@@ -17,71 +17,70 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, newItems = 0 }) => {
     : formatDistanceToNow(new Date(course.createdAt), { addSuffix: true });
   
   return (
-    <Link href={`/courses/${course.id}/modules`}>
-      <a className="block h-full">
-        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden h-full flex flex-col hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
-          {/* Card Header */}
-          <div className="p-5 border-b border-neutral-200 dark:border-neutral-700">
-            <div className="flex justify-between items-start mb-1">
-              <h3 className="font-medium text-neutral-800 dark:text-white text-lg">
-                {course.name}
-              </h3>
-              
-              {newItems > 0 && (
-                <Badge variant="default" className="ml-2 bg-blue-500 hover:bg-blue-600">
-                  {newItems} New
-                </Badge>
-              )}
-            </div>
-            
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm line-clamp-2">
-              {course.description || 'No description available'}
-            </p>
-          </div>
+    <div 
+      className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden h-full flex flex-col hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors cursor-pointer"
+      onClick={() => window.location.href = `/courses/${course.id}/modules`}
+    >
+      {/* Card Header */}
+      <div className="p-5 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-start mb-1">
+          <h3 className="font-medium text-neutral-800 dark:text-white text-lg">
+            {course.name}
+          </h3>
           
-          {/* Card Body */}
-          <div className="flex-1 p-5">
-            <div className="space-y-3">
-              {/* Course stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
-                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                    {formattedDate}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
-                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                    {course.studentCount || 0} Students
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
-                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                    {course.materialCount || 0} Materials
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <ExternalLink className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
-                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                    Code: {course.accessCode}
-                  </span>
-                </div>
-              </div>
+          {newItems > 0 && (
+            <Badge variant="default" className="ml-2 bg-blue-500 hover:bg-blue-600">
+              {newItems} New
+            </Badge>
+          )}
+        </div>
+        
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm line-clamp-2">
+          {course.description || 'No description available'}
+        </p>
+      </div>
+      
+      {/* Card Body */}
+      <div className="flex-1 p-5">
+        <div className="space-y-3">
+          {/* Course stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
+              <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                {formattedDate}
+              </span>
             </div>
-          </div>
-          
-          {/* Card Footer */}
-          <div className="p-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200 dark:border-neutral-700 text-center">
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center">
-              View Course
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </span>
+            <div className="flex items-center">
+              <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
+              <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                {course.studentCount || 0} Students
+              </span>
+            </div>
+            <div className="flex items-center">
+              <FileText className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
+              <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                {course.materialCount || 0} Materials
+              </span>
+            </div>
+            <div className="flex items-center">
+              <ExternalLink className="h-4 w-4 text-neutral-500 dark:text-neutral-400 mr-2" />
+              <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                Code: {course.accessCode}
+              </span>
+            </div>
           </div>
         </div>
-      </a>
-    </Link>
+      </div>
+      
+      {/* Card Footer */}
+      <div className="p-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200 dark:border-neutral-700 text-center">
+        <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center">
+          View Course
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </span>
+      </div>
+    </div>
   );
 };
 
