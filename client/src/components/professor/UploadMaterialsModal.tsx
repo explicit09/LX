@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Course } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import FileUpload from "@/components/ui/file-upload";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UploadMaterialsModalProps {
   open: boolean;
@@ -34,82 +36,53 @@ const UploadMaterialsModal = ({
   preselectedCourseId,
   onUploadComplete,
 }: UploadMaterialsModalProps) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<{file: string, status: 'pending' | 'success' | 'error', message?: string}[]>([]);
   const { toast } = useToast();
+
+  // Fetch courses data
+  const { 
+    data: courses = [], 
+    isLoading: isCoursesLoading,
+    error: coursesError
+  } = useQuery<Course[]>({
+    queryKey: ["/api/professor/courses"],
+    enabled: open, // Only fetch when modal is open
+  });
 
   useEffect(() => {
     if (open) {
-      fetchCourses();
-      if (preselectedCourseId) {
-        setSelectedCourseId(preselectedCourseId.toString());
-      }
-    }
-  }, [open, preselectedCourseId]);
-
-  const fetchCourses = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Mock data for demo purposes
-      const mockCourses: Course[] = [
-        {
-          id: 1,
-          name: "Introduction to Computer Science",
-          description: "Learn the fundamentals of computer science and programming.",
-          accessCode: "CS101",
-          professorId: 1,
-          createdAt: new Date().toISOString(),
-          studentCount: 32,
-          materialCount: 5
-        },
-        {
-          id: 2,
-          name: "Advanced Machine Learning",
-          description: "Deep dive into neural networks and reinforcement learning.",
-          accessCode: "ML404",
-          professorId: 1,
-          createdAt: new Date().toISOString(),
-          studentCount: 18,
-          materialCount: 7
-        }
-      ];
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In a real app, use this API call instead:
-      // const response = await fetch("/api/professor/courses");
-      // if (response.ok) {
-      //   const data = await response.json();
-      //   setCourses(data);
-      // }
-      
-      setCourses(mockCourses);
+      // Reset state when opening modal
+      setFiles([]);
+      setUploadStatus([]);
       
       // If we have a preselected course ID, set it
       if (preselectedCourseId) {
         setSelectedCourseId(preselectedCourseId.toString());
-      } else if (mockCourses.length > 0) {
+      } else if (courses.length > 0) {
         // Otherwise select the first course
-        setSelectedCourseId(mockCourses[0].id.toString());
+        setSelectedCourseId(courses[0].id.toString());
       }
-    } catch (error) {
+    }
+  }, [open, preselectedCourseId, courses]);
+
+  // If there's a courses error, show it
+  useEffect(() => {
+    if (coursesError) {
       toast({
         title: "Error",
-        description: "Failed to fetch courses. Please try again.",
+        description: "Failed to fetch your courses. Please try again later.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [coursesError, toast]);
 
   const handleFilesChange = (newFiles: File[]) => {
     setFiles(newFiles);
+    // Reset upload status when files change
+    setUploadStatus([]);
   };
 
   const handleUpload = async () => {
@@ -134,51 +107,82 @@ const UploadMaterialsModal = ({
     setIsUploading(true);
     
     try {
-      // For demo purposes, simulate API upload delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Initialize status for each file
+      setUploadStatus(files.map(f => ({ 
+        file: f.name, 
+        status: 'pending'
+      })));
       
-      // In a real app, use this code:
-      // for (const file of files) {
-      //   const formData = new FormData();
-      //   formData.append("file", file);
-      //   
-      //   const response = await fetch(`/api/courses/${selectedCourseId}/materials`, {
-      //     method: "POST",
-      //     body: formData,
-      //     credentials: "include",
-      //   });
-      //
-      //   if (!response.ok) {
-      //     throw new Error(`Failed to upload ${file.name}`);
-      //   }
-      // }
+      let successCount = 0;
       
-      // For demo purposes, create mock material objects
-      const newMaterials = files.map((file, index) => {
-        const courseId = parseInt(selectedCourseId);
-        const fileType = file.type.includes('pdf') ? 'pdf' : 'audio';
+      // Upload each file individually
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         
-        return {
-          id: Date.now() + index, // Generate unique IDs
-          courseId,
-          name: file.name,
-          type: fileType,
-          path: `/uploads/${fileType}s/${file.name.replace(/\s+/g, '-')}`,
-          uploadDate: new Date().toISOString()
-        };
-      });
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          
+          const response = await fetch(`/api/professor/courses/${selectedCourseId}/materials`, {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Failed to upload ${file.name}`);
+          }
+          
+          // Update status to success for this file
+          setUploadStatus(prev => 
+            prev.map((status, idx) => 
+              idx === i ? { ...status, status: 'success' } : status
+            )
+          );
+          
+          successCount++;
+        } catch (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          
+          // Update status to error for this file
+          setUploadStatus(prev => 
+            prev.map((status, idx) => 
+              idx === i ? { 
+                ...status, 
+                status: 'error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+              } : status
+            )
+          );
+        }
+      }
       
-      // Store in localStorage for the dashboard to pick up
-      localStorage.setItem('materials_added', JSON.stringify(newMaterials));
-      
-      toast({
-        title: "Upload Successful",
-        description: `Successfully uploaded ${files.length} files.`,
-      });
-      
-      onUploadComplete();
-      onOpenChange(false);
-      setFiles([]);
+      // If at least one file uploaded successfully
+      if (successCount > 0) {
+        toast({
+          title: "Upload Successful",
+          description: `Successfully uploaded ${successCount} of ${files.length} files.`,
+        });
+        
+        // Invalidate materials queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ["/api/professor/materials"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/professor/courses", selectedCourseId, "materials"] });
+        
+        onUploadComplete();
+        
+        // If all files uploaded successfully, close the modal
+        if (successCount === files.length) {
+          onOpenChange(false);
+          setFiles([]);
+        }
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: "Failed to upload any files. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -212,12 +216,12 @@ const UploadMaterialsModal = ({
             </label>
             
             <Select
-              disabled={isLoading || courses.length === 0}
+              disabled={isCoursesLoading || courses.length === 0}
               value={selectedCourseId}
               onValueChange={setSelectedCourseId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={isLoading ? "Loading courses..." : "Select a course"} />
+                <SelectValue placeholder={isCoursesLoading ? "Loading courses..." : "Select a course"} />
               </SelectTrigger>
               <SelectContent>
                 {courses.map((course) => (
@@ -236,6 +240,42 @@ const UploadMaterialsModal = ({
               accept=".pdf,.mp3,.wav"
               multiple={true}
             />
+            
+            {/* Upload status indicators */}
+            {uploadStatus.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Upload Status:</p>
+                <div className="max-h-40 overflow-y-auto space-y-2">
+                  {uploadStatus.map((status, index) => (
+                    <div 
+                      key={index} 
+                      className={`text-sm p-2 rounded flex items-center ${
+                        status.status === 'success' 
+                          ? 'bg-green-50 text-green-800' 
+                          : status.status === 'error'
+                            ? 'bg-red-50 text-red-800'
+                            : 'bg-blue-50 text-blue-800'
+                      }`}
+                    >
+                      {status.status === 'pending' && (
+                        <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      <span className="flex-1 truncate">{status.file}</span>
+                      <span className="ml-2">
+                        {status.status === 'success' 
+                          ? '✓ Uploaded' 
+                          : status.status === 'error'
+                            ? `✖ Failed${status.message ? `: ${status.message}` : ''}`
+                            : 'Uploading...'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         

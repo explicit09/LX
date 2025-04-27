@@ -70,6 +70,14 @@ function Router() {
           <Route path="/professor/dashboard" component={ProfessorDashboard} />
           <Route path="/professor/courses" component={ProfessorCourses} />
           <Route path="/professor/courses/:id" component={ProfessorCourseDetail} />
+          <Route path="/professor/courses/:id/analytics" component={() => {
+            const CourseAnalytics = lazy(() => import('./pages/professor/CourseAnalytics'));
+            return (
+              <Suspense fallback={<div>Loading analytics...</div>}>
+                <CourseAnalytics />
+              </Suspense>
+            );
+          }} />
           <Route path="/professor/materials" component={ProfessorMaterials} />
           <Route path="/professor/reports" component={ProfessorReports} />
           <Route path="/professor/reports/:id" component={ProfessorReports} />

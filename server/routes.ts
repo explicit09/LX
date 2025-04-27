@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const averageQuestionsPerStudent = totalQuestions / students.length;
       
       // Group questions by day
-      const questionsByDay = allChatItems.reduce((acc, item) => {
+      const questionsByDay: Record<string, number> = allChatItems.reduce((acc: Record<string, number>, item) => {
         const date = new Date(item.timestamp).toISOString().split('T')[0];
         acc[date] = (acc[date] || 0) + 1;
         return acc;
@@ -558,7 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       // Find the maximum questions per day
-      const topQuestionsPerDay = Math.max(...Object.values(questionsByDay), 0);
+      const topQuestionsPerDay = Math.max(...Object.values(questionsByDay).map(v => Number(v)), 0);
       
       // Extract common topics (basic implementation - could be improved with NLP)
       // Here we're just counting common words in questions
@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .replace(/[^\w\s]/g, '')
         .split(/\s+/);
       
-      const wordCounts = words.reduce((acc, word) => {
+      const wordCounts: Record<string, number> = words.reduce((acc: Record<string, number>, word) => {
         // Ignore common stop words
         const stopWords = ['the', 'and', 'a', 'to', 'of', 'in', 'is', 'it', 'that', 'for', 'on', 'with', 'as', 'what', 'how', 'why'];
         if (word.length > 3 && !stopWords.includes(word)) {
@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .replace(/[^\w\s]/g, '')
           .split(/\s+/);
         
-        const studentWordCounts = studentWords.reduce((acc, word) => {
+        const studentWordCounts: Record<string, number> = studentWords.reduce((acc: Record<string, number>, word) => {
           const stopWords = ['the', 'and', 'a', 'to', 'of', 'in', 'is', 'it', 'that', 'for', 'on', 'with', 'as', 'what', 'how', 'why'];
           if (word.length > 3 && !stopWords.includes(word)) {
             acc[word] = (acc[word] || 0) + 1;

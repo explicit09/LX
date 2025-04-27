@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Material, Course } from "@/lib/types";
-import { Upload, Filter } from "lucide-react";
+import { Upload, Filter, Loader2 } from "lucide-react";
 
 import TopNav from "@/components/layout/TopNav";
 import SideNav from "@/components/layout/SideNav";
@@ -20,8 +20,14 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+// Extended Material type to include courseName from the backend
+interface EnhancedMaterial extends Material {
+  courseName?: string;
+}
+
 const Materials = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [uploadMaterialsModalOpen, setUploadMaterialsModalOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,48 +41,29 @@ const Materials = () => {
     queryKey: ["/api/professor/courses"],
   });
 
-  // Fetch all materials
+  // Fetch all materials - now enabled with our new endpoint
   const { 
     data: allMaterials = [], 
     isLoading: materialsLoading,
-    refetch: refetchMaterials 
-  } = useQuery<Material[]>({
-    queryKey: ["/api/professor/materials"],
-    // This endpoint doesn't exist yet, but would be ideal
-    enabled: false, // Disable until the endpoint is implemented
+    refetch: refetchMaterials,
+    error
+  } = useQuery<EnhancedMaterial[]>({
+    queryKey: ["/api/professor/materials"]
   });
 
-  // Mock materials data for the demo
-  const mockMaterials: Material[] = [
-    {
-      id: 1,
-      courseId: 1,
-      name: "Module 20.pdf",
-      type: "pdf",
-      path: "pdfs/module_20.pdf",
-      uploadDate: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      courseId: 1,
-      name: "Audio recording (transcribed)",
-      type: "audio",
-      path: "audio/lecture_recording.mp3",
-      uploadDate: new Date().toISOString(),
-      transcription: "This is a transcription of the audio recording..."
-    },
-    {
-      id: 3,
-      courseId: 2,
-      name: "Module 21.pdf",
-      type: "pdf",
-      path: "pdfs/module_21.pdf",
-      uploadDate: new Date().toISOString(),
+  // If there's an error fetching materials, show a toast
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error loading materials",
+        description: "There was a problem loading your course materials.",
+        variant: "destructive"
+      });
     }
-  ];
+  }, [error, toast]);
 
   // Filter materials based on selected course, search query, and file type
-  const filteredMaterials = mockMaterials.filter(material => {
+  const filteredMaterials = allMaterials.filter(material => {
     const matchesCourse = selectedCourseId === "all" || material.courseId.toString() === selectedCourseId;
     const matchesSearch = material.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFileType = fileTypeFilter === "all" || material.type === fileTypeFilter;
