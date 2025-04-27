@@ -1,0 +1,131 @@
+Below is a breakdown of the three core screens you’ll need to build, along with a detailed spec for how the in-context chatbot should look and behave on the “Module Detail” page.
+
+⸻
+
+1. Dashboard (Canvas-style Home)
+
+Path: /dashboard
+Purpose: Show every course the student is enrolled in, plus a “continual learning” widget at the top.
+
+Layout
+	•	Global Nav (top)
+	•	School logo (left)
+	•	“Dashboard” breadcrumb/title
+	•	User avatar → menu (Profile, Settings, Log out)
+	•	Left Sidebar (fixed)
+	•	Dashboard
+	•	Courses
+	•	Calendar
+	•	Inbox
+	•	Help
+	•	Main Content
+	•	Optional “Continual Learning” Banner
+	•	Highlights upcoming review topics or flash-card decks
+	•	Course Tiles (grid)
+	•	Card for each course (tile image, course name + code, semester)
+	•	“3 new items” badge if unread announcements/assignments
+	•	Hover shows ⋮ menu: “Go to course,” “Mute notifications,” etc.
+	•	Right “To-Do” Panel (optional collapse)
+	•	List of upcoming assignments, quizzes, readings (with due dates)
+
+Interactions
+	•	Clicking a course tile → /courses/:courseId/modules
+
+⸻
+
+2. Course Modules
+
+Path: /courses/:courseId/modules
+Purpose: Mirror Canvas’s Modules view — let students drill into topics.
+
+Layout
+	•	Global Nav & Left Sidebar (same as Dashboard)
+	•	Breadcrumb:
+Dashboard > [Course Name] > Modules
+	•	Module List (vertical accordion)
+	•	Each module header shows title (e.g. “02 – Moral Reasoning”) and any prerequisites
+	•	Chevron toggle to expand/collapse
+	•	Inside each module:
+	•	Prep Work (links to readings, Knowledge Checks)
+	•	Class Material (slides, videos, PDFs)
+	•	Assignments (links, due dates, point values)
+	•	Top Controls
+	•	“Collapse All” / “Expand All”
+	•	“Complete All Items” button
+
+Interactions
+	•	Accordion state persists per user (localStorage or backend)
+	•	Clicking an item → /courses/:courseId/modules/:moduleId
+
+⸻
+
+3. Module Detail + In-Context Chatbot
+
+Path: /courses/:courseId/modules/:moduleId
+Purpose: Show the selected content item (e.g. a PDF or slide deck) alongside an AI tutor that answers questions using only that module’s content.
+
+Layout
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Global Nav / Breadcrumb:                                             ×│
+│  Dashboard > Course Name > Modules > “02 – Moral Reasoning”           │
+├───────┬──────────────────────────────────────┬──────────────────────────┤
+│ Side  │     Main Content Pane                │  Chatbot Pane            │
+│ Nav   │ (e.g. PDF viewer, embedded video)    │ ┌───────────────────────┐│
+│       │                                      │ │ Chat Title: “Ask your ││
+│       │                                      │ │ AI Tutor”              ││
+│       │                                      │ ├───────────────────────┤│
+│       │                                      │ │ [chat history window] ││
+│       │                                      │ │ • User Q’s & AI A’s   ││
+│       │                                      │ │ • “↪️ See source” links││
+│       │                                      │ ├───────────────────────┤│
+│       │                                      │ │ [Text input box]      ││
+│       │                                      │ │ [Send ⏎] [Clear]      ││
+│       │                                      │ └───────────────────────┘│
+├───────┴──────────────────────────────────────┴──────────────────────────┤
+│ Footer (help links, copyright)                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Main Content Pane
+	•	Renders whatever resource the student clicked in the module (e.g. embedded PDF/slides or HTML transcript).
+	•	Toolbar above viewer: download, print, jump to page/video timestamp.
+
+Chatbot Pane
+	•	Positioning: right-docked, 30–35% width (collapsible to icon bar)
+	•	Header:
+	•	Title (“Course Tutor for ‘02 – Moral Reasoning’”)
+	•	Collapse button (↓ → chat minimized into a floating icon)
+	•	Chat History:
+	•	Scrollable list of user questions and AI replies
+	•	Each AI reply includes a “↪️ View source” link that, when clicked, highlights the exact paragraph/slide in the main pane
+	•	Input Area:
+	•	Multi-line textbox with placeholder “Ask a question about this module…”
+	•	“Send” button, ⌘+Enter to submit
+	•	“Clear chat” icon
+
+Chatbot Behavior
+	1.	Context Restriction
+	•	Only ingests text (OCR’d or transcript) and metadata from items within this module.
+	2.	Retrieval + Generation
+	•	On submit:
+	1.	Vector-search against module documents → top 3 passages
+	2.	Feed those to the LLM with a prompt that says “Answer based only on the following excerpts. Cite the slide/page numbers.”
+	3.	Citations & Source Linking
+	•	If user asks “Where did that come from?” clicking “↪️ View source” scrolls/highlights in the main pane.
+	4.	Persona & Tone
+	•	Matches the student’s learning persona (visual, narrative, hands-on) captured at onboarding.
+	•	Example: for visual learners, responses can start with “Imagine this as a flowchart…”
+
+Edge Cases & Extras
+	•	Offline Mode: if no network, show “You’re offline. Working with cached content only.”
+	•	Feedback Buttons: thumbs up / thumbs down on each AI reply to refine future answers.
+	•	Session Persistence: chat history saved per module so students can pick up where they left off.
+
+⸻
+
+Summary of Pages to Build
+	1.	Dashboard (/dashboard)
+	2.	Course Modules (/courses/:courseId/modules)
+	3.	Module Detail + Chatbot (/courses/:courseId/modules/:moduleId)
+
+Each page reuses the same global nav and left sidebar for consistency with Canvas, but swaps only the main/content panes. The in-context chatbot lives exclusively on the Module Detail page and is designed to keep the student focused on that module’s content.

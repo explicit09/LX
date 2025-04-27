@@ -1,101 +1,108 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Link, useLocation } from 'wouter';
+import { useUser } from '@/lib/user-context';
 import { 
+  Settings,
+  Bell,
+  User,
+  LogOut,
+  ChevronRight
+} from 'lucide-react';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser } from "@/lib/user-context";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
-const TopNav = () => {
+interface TopNavProps {
+  title?: string;
+  breadcrumbs?: Array<{
+    label: string;
+    path: string;
+  }>;
+}
+
+const TopNav: React.FC<TopNavProps> = ({ 
+  title = 'Dashboard',
+  breadcrumbs = []
+}) => {
   const { user, clearUser } = useUser();
-  const { toast } = useToast();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
+  const [, setLocation] = useLocation();
+  
   const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      await apiRequest("POST", "/api/auth/logout", {});
-      clearUser();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
+    await clearUser();
+    setLocation('/auth');
   };
 
-  if (!user) {
-    return null;
-  }
-
-  const initials = user.name
-    .split(" ")
-    .map(name => name[0])
-    .join("")
-    .toUpperCase()
-    .substring(0, 2);
-
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link to="/">
-              <span className="text-xl font-bold text-primary cursor-pointer">EduQuest</span>
-            </Link>
+    <div className="fixed top-0 left-16 md:left-64 right-0 h-16 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 z-10 flex items-center justify-between px-4 md:px-8">
+      {/* Left side: Title & Breadcrumbs */}
+      <div className="flex items-center">
+        <h1 className="text-xl font-semibold text-neutral-800 dark:text-white">{title}</h1>
+        
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && (
+          <div className="hidden md:flex items-center ml-4">
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={crumb.path}>
+                {index > 0 && <ChevronRight className="h-4 w-4 mx-2 text-neutral-400" />}
+                <Link href={crumb.path}>
+                  <a className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200">
+                    {crumb.label}
+                  </a>
+                </Link>
+              </React.Fragment>
+            ))}
+            <ChevronRight className="h-4 w-4 mx-2 text-neutral-400" />
+            <span className="text-sm text-neutral-800 dark:text-neutral-200">{title}</span>
           </div>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">{user.name}</span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-8 w-8 rounded-full focus:ring-0 focus:ring-offset-0"
-                >
-                  <div className={`h-8 w-8 rounded-full ${user.role === "professor" ? "bg-primary" : "bg-accent"} text-white flex items-center justify-center`}>
-                    <span className="text-sm font-medium">{initials}</span>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">
-                    <span className="w-full cursor-pointer">Your Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings">
-                    <span className="w-full cursor-pointer">Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="cursor-pointer"
-                >
-                  {isLoggingOut ? "Logging out..." : "Sign Out"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        )}
       </div>
-    </header>
+      
+      {/* Right side: User menu */}
+      <div className="flex items-center space-x-4">
+        <button className="text-neutral-600 dark:text-neutral-300 hover:text-neutral-800 dark:hover:text-white">
+          <Bell className="h-5 w-5" />
+        </button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center space-x-2 focus:outline-none">
+              <div className="relative">
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=random`}
+                  alt={user?.name || 'User'} 
+                  className="w-8 h-8 rounded-full border border-neutral-200 dark:border-neutral-700"
+                />
+              </div>
+              <span className="hidden md:block text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                {user?.name || 'User'}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 };
 

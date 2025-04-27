@@ -1,0 +1,85 @@
+Below is the same spec, organized as a Canvas-style course: three Modules, each containing Pages that describe exactly what to build. You can import this as a “blueprint” into Canvas (or hand it straight to your dev team).
+
+⸻
+
+Course: LEARN-X UI Prototype Spec
+
+⸻
+
+Module 1 ▶ Dashboard
+
+Page 1.1 – Dashboard Overview
+
+URL: /dashboard
+	•	Canvas-style Home: shows every course + continual-learning widget.
+	•	Uses the same Global Nav & Left Sidebar as Canvas.
+
+Page 1.2 – Dashboard Components
+	•	Global Nav (top)
+	•	School logo | “Dashboard” breadcrumb | User avatar menu
+	•	Left Sidebar
+	•	Dashboard / Courses / Calendar / Inbox / Help
+	•	Main Area
+	•	Banner: “Continual Learning” flash-card suggestions
+	•	Course Tiles Grid:
+	•	Tile = course image + name/code + semester badge
+	•	“New items” red badge
+	•	⋮ menu on hover (Go to course, Mute)
+	•	Right “To-Do” Panel (collapsible)
+	•	List of upcoming assignments with due dates
+
+⸻
+
+Module 2 ▶ Course Modules
+
+Page 2.1 – Modules List
+
+URL: /courses/:courseId/modules
+	•	Mirrors Canvas’s Modules page (accordion style).
+	•	Breadcrumb: Dashboard > [Course] > Modules
+
+Page 2.2 – Modules Layout & Controls
+	•	Top Controls: “Collapse All” | “Expand All” | “Complete All Items”
+	•	Accordion (per module):
+	•	Header = module title + prereqs
+	•	Body = sections: Prep Work (readings, quizzes), Class Materials, Assignments
+	•	State persists per user
+
+⸻
+
+Module 3 ▶ Module Detail + In-Context Chatbot
+
+Page 3.1 – Content Viewer
+
+URL: /courses/:courseId/modules/:moduleId
+	•	Breadcrumb: … > Modules > “02 – Moral Reasoning”
+	•	Main Pane (65% width):
+	•	Embed PDF/slide deck/video/transcript
+	•	Toolbar: download ↓, print 🖨, jump-to-page/time
+
+Page 3.2 – Chatbot Pane Layout
+	•	Docked Right (35% width, collapsible)
+	•	Header:
+	•	Title: “AI Tutor: ‘02 – Moral Reasoning’”
+	•	Collapse ↓ icon
+	•	Chat Window:
+	•	Scrollable Q&A history
+	•	Each AI reply has “↪️ View source” link
+	•	Input Area:
+	•	Multi-line box “Ask a question about this module…”
+	•	[Send ⏎] button & [Clear] icon
+
+Page 3.3 – Chatbot Behavior
+	1.	Scope: Only ingests documents in this module.
+	2.	RAG Flow:
+	•	Vector‐search → top 3 passages
+	•	LLM prompt: “Answer only from these excerpts. Cite slide/page.”
+	3.	Source Linking:
+	•	“↪️ View source” scrolls/highlights in Main Pane
+	4.	Persona: Adapts tone to learner’s profile (visual, narrative, hands-on)
+	5.	Feedback: 👍/👎 on each answer to refine future responses
+	6.	Persistence: Chat history saved per module
+
+⸻
+
+End of Blueprint — hand this Canvas-module outline to your front-end team, and each “Page” becomes a real Canvas page or component spec in your LMS.
