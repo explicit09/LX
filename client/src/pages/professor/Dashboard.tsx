@@ -25,7 +25,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 const ProfessorDashboard = () => {
-  const { user } = useUser();
+  const { user, isLoading: userIsLoading } = useUser();
   const { toast } = useToast();
   const [location, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,7 +55,7 @@ const ProfessorDashboard = () => {
   }, [user, navigate, toast]);
   
   // Fetch professor's courses
-  const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
+  const { data: courses = [], isLoading: isLoadingCourses, refetch } = useQuery<Course[]>({
     queryKey: ['/api/professor/courses'],
     enabled: !!user,
   });
@@ -129,7 +129,7 @@ const ProfessorDashboard = () => {
   };
   
   // We should show a loading state while checking authentication
-  if (isLoading) {
+  if (userIsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
         <div className="text-center">
@@ -269,7 +269,7 @@ const ProfessorDashboard = () => {
       </div>
       
       {/* Courses Grid */}
-      {isLoading ? (
+      {isLoadingCourses ? (
         <div className="text-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-neutral-300 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full mx-auto"></div>
           <p className="mt-4 text-neutral-600 dark:text-neutral-400">Loading your courses...</p>
