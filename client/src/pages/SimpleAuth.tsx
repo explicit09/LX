@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
 import { useUser } from "@/lib/user-context";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SimpleAuth() {
-  const [, navigate] = useLocation();
-  const { user, setUser, navigateToDashboard } = useUser();
+  // States
+  const { user, setUser } = useUser();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +32,13 @@ export default function SimpleAuth() {
     setFormState(prev => ({ ...prev, role: value }));
   };
 
+  // Direct navigation function (avoid using React router)
+  const navigateToUserDashboard = (role: "professor" | "student") => {
+    const dashboardPath = role === "professor" ? "/professor/dashboard" : "/student/dashboard";
+    console.log("Manual navigation to:", dashboardPath);
+    window.location.href = dashboardPath;
+  };
+
   // Handle login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +56,6 @@ export default function SimpleAuth() {
       
       console.log("Attempting login with:", formState.username);
       
-      // Test credentials directly instead of using role selection
-      // tmbuwa09@gmail.com is registered as a professor
       const loginData = {
         username: formState.username,
         password: formState.password
@@ -69,17 +72,12 @@ export default function SimpleAuth() {
       
       console.log("Login response status:", response.status, response.statusText);
       
+      if (response.status === 401) {
+        throw new Error("Invalid credentials. Please try again.");
+      }
+      
       if (!response.ok) {
-        // Handle non-200 responses
-        const errorText = await response.text();
-        console.error("Login error response:", errorText);
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.message || "Login failed");
-        } catch (e) {
-          throw new Error("Login failed: " + response.statusText);
-        }
+        throw new Error("Login failed: " + response.statusText);
       }
       
       const userData = await response.json();
@@ -93,8 +91,9 @@ export default function SimpleAuth() {
         description: `Welcome back, ${userData.name || "user"}!`,
       });
       
-      // Use navigateToDashboard from user context
-      navigateToDashboard();
+      // Use direct browser navigation instead of React router
+      navigateToUserDashboard(userData.role);
+      
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -140,7 +139,6 @@ export default function SimpleAuth() {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Registration error response:", errorText);
         try {
           const errorData = JSON.parse(errorText);
           throw new Error(errorData.message || "Registration failed");
@@ -160,8 +158,9 @@ export default function SimpleAuth() {
         description: `Welcome, ${userData.name}!`,
       });
       
-      // Use navigateToDashboard from user context
-      navigateToDashboard();
+      // Use direct browser navigation
+      navigateToUserDashboard(userData.role);
+      
     } catch (error) {
       console.error("Registration error:", error);
       toast({
@@ -177,9 +176,9 @@ export default function SimpleAuth() {
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      navigateToDashboard();
+      navigateToUserDashboard(user.role);
     }
-  }, [user, navigateToDashboard]);
+  }, [user]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 px-4">

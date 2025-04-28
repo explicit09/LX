@@ -8,7 +8,6 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   clearUser: () => Promise<void>;
   isLoading: boolean;
-  navigateToDashboard: () => void;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -16,7 +15,6 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   clearUser: async () => {},
   isLoading: true,
-  navigateToDashboard: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -62,22 +60,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Helper function to navigate to the appropriate dashboard
-  const navigateToDashboard = useCallback(() => {
-    if (!user) return;
-    
-    const targetPath = user.role === "professor" ? "/professor/dashboard" : "/student/dashboard";
-    console.log("Navigating to dashboard:", targetPath);
-    navigate(targetPath);
-  }, [user, navigate]);
+  // We no longer need the navigateToDashboard function
+  // We're using direct browser navigation instead
 
   return (
     <UserContext.Provider value={{ 
       user, 
       setUser, 
       clearUser, 
-      isLoading,
-      navigateToDashboard
+      isLoading
     }}>
       {children}
     </UserContext.Provider>

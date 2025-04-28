@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/lib/user-context';
 import { Course } from '@/lib/types';
-import { useLocation } from 'wouter';
 import CanvasLayout from '@/components/layout/CanvasLayout';
 import CourseCard from '@/components/course/CourseCard';
 import TodoList from '@/components/dashboard/TodoList';
 import ContinualLearningBanner from '@/components/dashboard/ContinualLearningBanner';
 import { Button } from '@/components/ui/button';
-import { Search, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Search, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,14 +20,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
+// Simple dashboard component with minimal complexity
 const ProfessorDashboard = () => {
-  const { user, isLoading: userIsLoading } = useUser();
+  // Hooks and state
+  const { user, isLoading } = useUser();
   const { toast } = useToast();
-  const [location, navigate] = useLocation();
+  
+  // UI state
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -37,56 +39,44 @@ const ProfessorDashboard = () => {
     accessCode: generateAccessCode()
   });
   
-  // Log user state for debugging
-  useEffect(() => {
-    console.log("ProfessorDashboard - user state:", user?.username, user?.role);
-    
-    // This check is now handled by the ProtectedRoute component in App.tsx
-    // but we'll keep it here as a double-check
-    if (user && user.role !== 'professor') {
-      console.log("User with non-professor role accessing professor dashboard:", user.role);
-      toast({
-        title: 'Access Denied',
-        description: 'You need professor privileges to access this page.',
-        variant: 'destructive'
-      });
-      navigate('/');
-    }
-  }, [user, navigate, toast]);
-  
-  // Fetch professor's courses
-  const { data: courses = [], isLoading: isLoadingCourses, refetch } = useQuery<Course[]>({
+  // Fetch courses (only if user is available)
+  const { 
+    data: courses = [], 
+    isLoading: isLoadingCourses, 
+    refetch 
+  } = useQuery<Course[]>({
     queryKey: ['/api/professor/courses'],
     enabled: !!user,
   });
   
-  // Generate an access code based on course name or timestamp
+  // Generate an access code based on course name
   function generateAccessCode(courseName: string = '') {
-    // Use the first 3 characters of course name (uppercase) or current time for uniqueness
+    // Use the first 3 characters of course name or a default
     const prefix = courseName.length > 0 
       ? courseName.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, 'X')
       : 'CRS';
     
-    // Use timestamp for uniqueness - last 3 digits of current timestamp
+    // Add timestamp for uniqueness
     const timestamp = Date.now().toString().slice(-3);
     
     return `${prefix}${timestamp}`;
   }
   
-  // Filter courses based on search term
+  // Filter courses based on search
   const filteredCourses = courses.filter(course => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // Handle input changes for new course form
+  // Form change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewCourse(prev => ({ ...prev, [name]: value }));
   };
   
-  // Handle create course
+  // Create course handler
   const handleCreateCourse = async () => {
+    // Validate form
     if (!newCourse.name) {
       toast({
         title: 'Missing information',
@@ -99,7 +89,13 @@ const ProfessorDashboard = () => {
     try {
       setIsCreating(true);
       
-      await apiRequest('POST', '/api/professor/courses', newCourse);
+      // API request to create course
+      const response = await apiRequest('POST', '/api/professor/courses', newCourse);
+      
+      // Check if request was successful
+      if (!response.ok) {
+        throw new Error('Failed to create course');
+      }
       
       toast({
         title: 'Course created',
@@ -114,7 +110,7 @@ const ProfessorDashboard = () => {
       });
       setIsCreateDialogOpen(false);
       
-      // Refetch courses to update the list
+      // Refetch courses
       refetch();
     } catch (error) {
       console.error('Failed to create course:', error);
@@ -128,10 +124,10 @@ const ProfessorDashboard = () => {
     }
   };
   
-  // We should show a loading state while checking authentication
-  if (userIsLoading) {
+  // Loading state while checking user authentication
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-neutral-300 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full mx-auto mb-4"></div>
           <p className="text-neutral-600 dark:text-neutral-400">Loading dashboard...</p>
@@ -140,11 +136,11 @@ const ProfessorDashboard = () => {
     );
   }
   
-  // This check is technically redundant with ProtectedRoute but kept for extra safety
+  // Unauthorized state
   if (!user) {
     console.log("ProfessorDashboard - No user found");
     return (
-      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-900">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md max-w-md w-full text-center">
           <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
           <p className="text-neutral-600 dark:text-neutral-400 mb-6">
@@ -158,6 +154,7 @@ const ProfessorDashboard = () => {
     );
   }
   
+  // Main dashboard layout
   return (
     <CanvasLayout 
       title="Dashboard" 
