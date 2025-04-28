@@ -66,25 +66,32 @@ const BasicDashboard = () => {
     queryKey: ['/api/professor/courses'],
     enabled: !!user,
     queryFn: async () => {
-      console.log("Executing courses query function...");
-      const response = await fetch('/api/professor/courses', {
+      console.log("🔍 Executing courses query function");
+      const res = await fetch('/api/professor/courses', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       
-      console.log("Courses API response:", response.status, response.statusText);
+      console.log("Courses API response:", res.status, res.statusText);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Courses API error response:", errorText);
-        throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`API Error (${res.status}):`, text);
+        throw new Error(`${res.status}: ${text}`);
       }
       
-      const data = await response.json();
-      console.log("Loaded courses data:", data);
+      const data = await res.json();
+      console.log('📊 Courses data received:', data);
       return data;
-    }
+    },
+    onSuccess(data) {
+      console.log('✅ Courses query succeeded:', data.length, 'courses');
+    },
+    onError(err) {
+      console.error('❌ Courses query failed:', err);
+    },
+    retry: 1
   });
   
   // Handle error when it occurs
