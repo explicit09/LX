@@ -132,6 +132,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Debug endpoint to create a test course
+  app.post("/api/debug/courses", async (req, res) => {
+    try {
+      const { name, description, professorId, accessCode } = req.body;
+      
+      console.log("DEBUG: Creating test course:", req.body);
+      
+      // Create course
+      const course = await storage.createCourse({
+        name,
+        description,
+        professorId,
+        accessCode: accessCode || generateAccessCode()
+      });
+      
+      console.log("DEBUG: Created course:", course);
+      res.status(201).json(course);
+    } catch (error) {
+      console.error("DEBUG: Error creating course:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: "Failed to create course"
+      });
+    }
+  });
+  
+  // Debug endpoint to create a test course with GET (for easy testing)
+  app.get("/api/debug/create-test-course/:professorId", async (req, res) => {
+    try {
+      const professorId = parseInt(req.params.professorId);
+      
+      console.log(`DEBUG: Creating test course for professor ID ${professorId}`);
+      
+      // Create a unique access code based on timestamp
+      const accessCode = `TEST${Date.now().toString().slice(-3)}`;
+      
+      console.log(`DEBUG: Using access code ${accessCode}`);
+      
+      // Create course with some default data
+      const courseData = {
+        name: `Test Course ${Date.now()}`,
+        description: "This is a test course created via the debug API",
+        professorId,
+        accessCode: accessCode
+      };
+      
+      console.log("DEBUG: Attempting to create course with data:", JSON.stringify(courseData));
+      
+      // Create course
+      const course = await storage.createCourse(courseData);
+      
+      console.log("DEBUG: Created test course:", JSON.stringify(course));
+      
+      // Verify in the database that the course was created
+      const count = await storage.getTableCount("courses");
+      console.log(`DEBUG: Total courses in database after creation: ${count}`);
+      
+      res.status(201).json({
+        course,
+        message: "Test course created successfully",
+        courseCount: count
+      });
+    } catch (error) {
+      console.error("DEBUG: Error creating test course:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: "Failed to create test course"
+      });
+    }
+  });
+  
   // Configure multer for file uploads
   const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
