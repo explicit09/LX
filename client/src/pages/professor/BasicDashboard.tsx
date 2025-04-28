@@ -64,7 +64,27 @@ const BasicDashboard = () => {
     refetch 
   } = useQuery<Course[]>({
     queryKey: ['/api/professor/courses'],
-    enabled: !!user
+    enabled: !!user,
+    queryFn: async () => {
+      console.log("Executing courses query function...");
+      const response = await fetch('/api/professor/courses', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      
+      console.log("Courses API response:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Courses API error response:", errorText);
+        throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Loaded courses data:", data);
+      return data;
+    }
   });
   
   // Handle error when it occurs
