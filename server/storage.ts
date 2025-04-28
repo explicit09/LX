@@ -7,7 +7,7 @@ import {
   type ChatItem, type InsertChatItem
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import session from "express-session";
@@ -39,6 +39,9 @@ export interface IStorage {
   createChatItem(chatItem: InsertChatItem): Promise<ChatItem>;
   getStudentChatHistory(studentId: number, courseId: number): Promise<ChatItem[]>;
   getCourseChatHistory(courseId: number): Promise<ChatItem[]>;
+  
+  // Debug/utility operations
+  getTableCount(tableName: string): Promise<number>;
   
   // Session store for express-session
   sessionStore: SessionStore;
@@ -175,6 +178,35 @@ export class DatabaseStorage implements IStorage {
       .from(chatHistory)
       .where(eq(chatHistory.courseId, courseId))
       .orderBy(chatHistory.timestamp);
+  }
+  
+  // Debug/utility operations
+  async getTableCount(tableName: string): Promise<number> {
+    try {
+      // Use a switch statement for different tables
+      switch (tableName) {
+        case 'users':
+          const usersResult = await db.select().from(users);
+          return usersResult.length;
+        case 'courses':
+          const coursesResult = await db.select().from(courses);
+          return coursesResult.length;
+        case 'enrollments':
+          const enrollmentsResult = await db.select().from(enrollments);
+          return enrollmentsResult.length;
+        case 'materials':
+          const materialsResult = await db.select().from(materials);
+          return materialsResult.length;
+        case 'chat_history':
+          const chatResult = await db.select().from(chatHistory);
+          return chatResult.length;
+        default:
+          return 0;
+      }
+    } catch (error) {
+      console.error(`Error counting rows in ${tableName}:`, error);
+      return 0;
+    }
   }
 }
 

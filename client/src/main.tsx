@@ -10,6 +10,7 @@ declare global {
       testProfessorCourses: () => Promise<any>;
       getUserInfo: () => Promise<any>;
       checkAuth: () => Promise<any>;
+      testDatabaseConnection: () => Promise<any>;
     }
   }
 }
@@ -72,6 +73,28 @@ window.debugApi = {
     } catch (error) {
       console.error("DEBUG: Auth check failed:", error);
       return false;
+    }
+  },
+  
+  testDatabaseConnection: async () => {
+    console.log("DEBUG: Testing database connection...");
+    try {
+      const response = await fetch('/api/debug/database', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      console.log("DEBUG: Database connection test status:", response.status);
+      if (!response.ok) {
+        console.error("DEBUG: Database test failed:", await response.text());
+        return null;
+      }
+      const data = await response.json();
+      console.log("DEBUG: Database test result:", data);
+      return data;
+    } catch (error) {
+      console.error("DEBUG: Database test request failed:", error);
+      return null;
     }
   }
 };

@@ -44,6 +44,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   const { isAuthenticated, isProfessor, isStudent } = setupAuth(app);
   
+  // Debug endpoint to check database connection
+  app.get("/api/debug/database", isAuthenticated, async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        currentUser: req.user,
+        environment: {
+          DATABASE_URL: process.env.DATABASE_URL ? "✓ Set" : "✗ Missing",
+          PGHOST: process.env.PGHOST ? "✓ Set" : "✗ Missing",
+          PGDATABASE: process.env.PGDATABASE ? "✓ Set" : "✗ Missing",
+          OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "✓ Set" : "✗ Missing",
+        },
+        message: "Database connection is working"
+      });
+    } catch (error) {
+      console.error("Database debug error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: "Failed to check database connection"
+      });
+    }
+  });
+  
   // Configure multer for file uploads
   const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
