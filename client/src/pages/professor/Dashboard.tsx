@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/lib/user-context';
 import { Course } from '@/lib/types';
@@ -9,7 +9,7 @@ import ContinualLearningBanner from '@/components/dashboard/ContinualLearningBan
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from '@/components/ui/label';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 // Simple dashboard component with minimal complexity
@@ -39,15 +40,48 @@ const ProfessorDashboard = () => {
     accessCode: generateAccessCode()
   });
   
+  // Enhanced logging for authentication debugging
+  useEffect(() => {
+    console.log("ProfessorDashboard - Auth state:", { 
+      isAuthenticated: !!user, 
+      userObject: user ? { id: user.id, role: user.role, username: user.username } : null
+    });
+  }, [user]);
+  
+  // Error handling callback
+  const handleCoursesError = useCallback((error: Error) => {
+    console.error("Failed to fetch courses:", error);
+    toast({
+      title: "Failed to load courses",
+      description: "There was a problem loading your courses. Please try refreshing the page.",
+      variant: "destructive"
+    });
+  }, [toast]);
+  
   // Fetch courses (only if user is available)
   const { 
     data: courses = [], 
     isLoading: isLoadingCourses, 
+    error: coursesError,
     refetch 
   } = useQuery<Course[]>({
     queryKey: ['/api/professor/courses'],
-    enabled: !!user,
+    enabled: !!user
   });
+  
+  // Handle error when it occurs
+  useEffect(() => {
+    if (coursesError) {
+      handleCoursesError(coursesError as Error);
+    }
+  }, [coursesError, handleCoursesError]);
+  
+  // Log success
+  useEffect(() => {
+    if (courses && courses.length > 0) {
+      console.log("Successfully loaded courses:", courses.length);
+    }
+  }, [courses]);
   
   // Generate an access code based on course name
   function generateAccessCode(courseName: string = '') {
@@ -264,6 +298,25 @@ const ProfessorDashboard = () => {
           </Dialog>
         </div>
       </div>
+      
+      {/* Error message if courses fail to load */}
+      {coursesError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error loading courses</AlertTitle>
+          <AlertDescription>
+            There was a problem loading your courses. The error was: {coursesError.message}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()} 
+              className="mt-2"
+            >
+              Try Again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Courses Grid */}
       {isLoadingCourses ? (
