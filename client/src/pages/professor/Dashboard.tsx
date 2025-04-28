@@ -403,23 +403,38 @@ const ProfessorDashboard = () => {
           </Dialog>
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
-          <h3 className="font-medium text-neutral-800 dark:text-white text-lg mb-2">
-            No courses found
-          </h3>
-          <p className="text-neutral-500 dark:text-neutral-400">
-            {searchTerm ? 'Try searching with different keywords' : 'You haven\'t created any courses yet'}
-          </p>
-          {!searchTerm && (
+        <div className="p-8 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-full inline-block">
+              <div className="bg-blue-100 dark:bg-blue-800 h-16 w-16 rounded-full flex items-center justify-center">
+                <Plus className="h-8 w-8 text-blue-600 dark:text-blue-300" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-neutral-800 dark:text-white mb-3">
+              Welcome to Learn-X!
+            </h2>
+            <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
+              You haven't created any courses yet
+            </h3>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
+              {searchTerm 
+                ? 'No courses match your search criteria. Try different keywords or clear the search filter.' 
+                : 'Get started by creating your first course. Students will use your course access code to join.'}
+            </p>
+            
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700">
+                  <Plus className="h-5 w-5 mr-2" />
                   Create Your First Course
                 </Button>
               </DialogTrigger>
             </Dialog>
-          )}
+            
+            <div className="mt-8 text-sm text-neutral-500 dark:text-neutral-400">
+              <p>Need help getting started? <a href="#" className="text-blue-600 dark:text-blue-400 underline">View the tutorial</a></p>
+            </div>
+          </div>
         </div>
       )}
     </CanvasLayout>
