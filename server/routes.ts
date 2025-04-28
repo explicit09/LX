@@ -68,6 +68,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Debug endpoint to get table counts
+  app.get("/api/debug/table-counts", async (req, res) => {
+    try {
+      // Check table counts
+      const userCount = await storage.getTableCount("users");
+      const courseCount = await storage.getTableCount("courses");
+      const enrollmentCount = await storage.getTableCount("enrollments");
+      const materialCount = await storage.getTableCount("materials");
+      const chatCount = await storage.getTableCount("chat_history");
+      
+      res.json({
+        success: true,
+        tables: {
+          users: userCount,
+          courses: courseCount,
+          enrollments: enrollmentCount,
+          materials: materialCount,
+          chat_history: chatCount
+        }
+      });
+    } catch (error) {
+      console.error("Table counts error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: "Failed to get table counts"
+      });
+    }
+  });
+  
+  // Debug endpoint to force load professor courses
+  app.get("/api/debug/professor-courses/:id", async (req, res) => {
+    try {
+      const professorId = parseInt(req.params.id);
+      console.log(`DEBUG: Getting courses for professor ID ${professorId}`);
+      
+      // Get professor courses
+      const courses = await storage.getProfessorCourses(professorId);
+      console.log(`Found ${courses.length} courses for professor ID ${professorId}`);
+      
+      // Enhance courses with student and material counts
+      const enhancedCourses = await Promise.all(courses.map(async (course) => {
+        const students = await storage.getCourseStudents(course.id);
+        const materials = await storage.getCourseMaterials(course.id);
+        
+        return {
+          ...course,
+          studentCount: students.length,
+          materialCount: materials.length
+        };
+      }));
+      
+      console.log("DEBUG: Returning enhanced courses:", JSON.stringify(enhancedCourses).substring(0, 200) + "...");
+      res.json(enhancedCourses);
+    } catch (error) {
+      console.error("DEBUG: Error getting professor courses:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: "Failed to get professor courses"
+      });
+    }
+  });
+  
   // Configure multer for file uploads
   const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {

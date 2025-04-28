@@ -83,13 +83,7 @@ const BasicDashboard = () => {
       
       const data = await res.json();
       console.log('📊 Courses data received:', data);
-      return data;
-    },
-    onSuccess(data) {
-      console.log('✅ Courses query succeeded:', data.length, 'courses');
-    },
-    onError(err) {
-      console.error('❌ Courses query failed:', err);
+      return data as Course[];
     },
     retry: 1
   });
@@ -158,7 +152,7 @@ const BasicDashboard = () => {
   }
   
   // Filter courses based on search
-  const filteredCourses = courses.filter(course => 
+  const filteredCourses = courses.filter((course: Course) => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -401,7 +395,7 @@ const BasicDashboard = () => {
         </div>
       ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
+          {filteredCourses.map((course: Course) => (
             <CourseCard 
               key={course.id} 
               course={course} 
