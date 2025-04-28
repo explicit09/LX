@@ -83,7 +83,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all courses taught by the professor
   app.get("/api/professor/courses", isProfessor, async (req, res, next) => {
     try {
+      console.log("GET /api/professor/courses - Authenticated user:", req.user?.username, "ID:", req.user?.id);
+      
       const courses = await storage.getProfessorCourses(req.user!.id);
+      console.log(`Found ${courses.length} courses for professor ID ${req.user!.id}`);
       
       // Enhance courses with student and material counts
       const enhancedCourses = await Promise.all(courses.map(async (course) => {
@@ -97,8 +100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
       
+      console.log("Returning enhanced courses:", JSON.stringify(enhancedCourses).substring(0, 200) + "...");
       res.json(enhancedCourses);
     } catch (error) {
+      console.error("Error getting professor courses:", error);
       next(error);
     }
   });

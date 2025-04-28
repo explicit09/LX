@@ -140,10 +140,26 @@ export function setupAuth(app: Express) {
 
   // Middleware for checking if a user has professor role
   const isProfessor = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated() && req.user && req.user.role === "professor") {
-      return next();
+    console.log("isProfessor middleware - isAuthenticated:", req.isAuthenticated());
+    console.log("isProfessor middleware - user:", req.user ? { id: req.user.id, username: req.user.username, role: req.user.role } : "null");
+    
+    if (!req.isAuthenticated()) {
+      console.log("isProfessor access denied - not authenticated");
+      return res.status(401).json({ message: "Authentication required" });
     }
-    res.status(403).json({ message: "Professor access required" });
+    
+    if (!req.user) {
+      console.log("isProfessor access denied - no user object");
+      return res.status(403).json({ message: "Professor access required - no user found" });
+    }
+    
+    if (req.user.role !== "professor") {
+      console.log("isProfessor access denied - user has role:", req.user.role);
+      return res.status(403).json({ message: "Professor access required - current role: " + req.user.role });
+    }
+    
+    console.log("isProfessor access granted to", req.user.username);
+    return next();
   };
 
   // Middleware for checking if a user has student role

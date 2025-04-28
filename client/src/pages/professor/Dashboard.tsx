@@ -83,6 +83,42 @@ const ProfessorDashboard = () => {
     }
   }, [courses]);
   
+  // Manual course loading function for debugging
+  const manualFetchCourses = useCallback(async () => {
+    try {
+      console.log("Attempting manual fetch of courses...");
+      const response = await fetch('/api/professor/courses', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      
+      console.log("Manual course fetch response:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error("Error response:", await response.text());
+        throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Manual course fetch successful:", data);
+      toast({
+        title: "Courses loaded",
+        description: `Successfully loaded ${data.length} courses`,
+      });
+      
+      // Force refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/professor/courses'] });
+    } catch (error) {
+      console.error("Manual fetch error:", error);
+      toast({
+        title: "Failed to load courses",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+  
   // Generate an access code based on course name
   function generateAccessCode(courseName: string = '') {
     // Use the first 3 characters of course name or a default
@@ -297,6 +333,21 @@ const ProfessorDashboard = () => {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+      
+      {/* Debugging button */}
+      <div className="mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={manualFetchCourses}
+          className="bg-purple-100 dark:bg-purple-900 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800"
+        >
+          🛠️ Test API Connection
+        </Button>
+        <span className="ml-2 text-xs text-neutral-500">
+          Debugging: Direct API call to /api/professor/courses
+        </span>
       </div>
       
       {/* Error message if courses fail to load */}
