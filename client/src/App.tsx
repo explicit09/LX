@@ -82,7 +82,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 
 // Professor pages
-import ProfessorDashboard from "@/pages/professor/Dashboard";
+import ProfessorDashboard from "@/pages/professor/BasicDashboard"; // Using our new simplified dashboard
 import ProfessorCourses from "@/pages/professor/Courses";
 import ProfessorCourseDetail from "@/pages/professor/CourseDetail";
 import ProfessorMaterials from "@/pages/professor/Materials";
