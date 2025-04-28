@@ -106,6 +106,31 @@ const BasicDashboard = () => {
   const manualFetchCourses = useCallback(async () => {
     try {
       console.log("Attempting manual fetch of courses...");
+      
+      // First check if there are any courses
+      const tableData = await window.debugApi.getTableCounts();
+      
+      if (tableData?.tables?.courses === 0) {
+        console.log("No courses found. Creating a test course...");
+        
+        // Get current user ID
+        const userData = await window.debugApi.getUserInfo();
+        if (!userData || !userData.id) {
+          throw new Error("Could not get current user ID");
+        }
+        
+        // Create a test course
+        const result = await window.debugApi.createTestCourse(userData.id);
+        
+        if (result?.success) {
+          toast({
+            title: "Test course created",
+            description: `Created course "${result.course.name}" with access code ${result.course.accessCode}`,
+          });
+        }
+      }
+      
+      // Now do the normal manual fetch
       const response = await fetch('/api/professor/courses', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },

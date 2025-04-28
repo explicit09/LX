@@ -11,6 +11,8 @@ declare global {
       getUserInfo: () => Promise<any>;
       checkAuth: () => Promise<any>;
       testDatabaseConnection: () => Promise<any>;
+      createTestCourse: (professorId: number) => Promise<any>;
+      getTableCounts: () => Promise<any>;
     }
   }
 }
@@ -94,6 +96,76 @@ window.debugApi = {
       return data;
     } catch (error) {
       console.error("DEBUG: Database test request failed:", error);
+      return null;
+    }
+  },
+  
+  createTestCourse: async (professorId: number) => {
+    console.log(`DEBUG: Creating test course for professor ID ${professorId}...`);
+    try {
+      // Use XMLHttpRequest to avoid Vite intercepting the request
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', `/api/debug/createcourse/${professorId}`);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              console.log("DEBUG: Test course created:", data);
+              resolve(data);
+            } catch (e) {
+              console.error("DEBUG: Error parsing JSON response:", xhr.responseText);
+              reject(new Error("Invalid JSON response"));
+            }
+          } else {
+            console.error("DEBUG: Error creating test course:", xhr.status, xhr.statusText);
+            reject(new Error(`Request failed with status ${xhr.status}`));
+          }
+        };
+        xhr.onerror = function() {
+          console.error("DEBUG: Network error creating test course");
+          reject(new Error("Network error"));
+        };
+        xhr.send();
+      });
+    } catch (error) {
+      console.error("DEBUG: Test course creation failed:", error);
+      return null;
+    }
+  },
+  
+  getTableCounts: async () => {
+    console.log("DEBUG: Getting table counts...");
+    try {
+      // Use XMLHttpRequest to avoid Vite intercepting the request
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/debug/table-counts');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              console.log("DEBUG: Table counts:", data);
+              resolve(data);
+            } catch (e) {
+              console.error("DEBUG: Error parsing JSON response:", xhr.responseText);
+              reject(new Error("Invalid JSON response"));
+            }
+          } else {
+            console.error("DEBUG: Error getting table counts:", xhr.status, xhr.statusText);
+            reject(new Error(`Request failed with status ${xhr.status}`));
+          }
+        };
+        xhr.onerror = function() {
+          console.error("DEBUG: Network error getting table counts");
+          reject(new Error("Network error"));
+        };
+        xhr.send();
+      });
+    } catch (error) {
+      console.error("DEBUG: Get table counts failed:", error);
       return null;
     }
   }

@@ -160,7 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Debug endpoint to create a test course with GET (for easy testing)
-  app.get("/api/debug/create-test-course/:professorId", async (req, res) => {
+  app.get("/api/debug/createcourse/:professorId", async (req, res) => {
+    // Force content type to be JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       const professorId = parseInt(req.params.professorId);
       
@@ -181,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("DEBUG: Attempting to create course with data:", JSON.stringify(courseData));
       
-      // Create course
+      // Create course 
       const course = await storage.createCourse(courseData);
       
       console.log("DEBUG: Created test course:", JSON.stringify(course));
@@ -190,18 +193,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const count = await storage.getTableCount("courses");
       console.log(`DEBUG: Total courses in database after creation: ${count}`);
       
-      res.status(201).json({
+      const responseData = {
+        success: true,
         course,
         message: "Test course created successfully",
         courseCount: count
-      });
+      };
+      
+      // Return JSON directly without using Express's json method
+      return res.end(JSON.stringify(responseData));
     } catch (error) {
       console.error("DEBUG: Error creating test course:", error);
-      res.status(500).json({
+      const errorResponse = {
         success: false,
         error: error instanceof Error ? error.message : String(error),
         message: "Failed to create test course"
-      });
+      };
+      
+      // Return JSON directly without using Express's json method
+      return res.status(500).end(JSON.stringify(errorResponse));
     }
   });
   
